@@ -371,6 +371,9 @@ class coffeegrindsize_GUI:
 		master.update()
 		image_filename = "/Users/gagne/Documents/IDL/IDL_resources/Kinu3.4_1_sub_detection_final.png"
 		
+		#Do not delete
+		#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		
 		if image_filename != "":
 			
 			master.img = Image.open(image_filename)
