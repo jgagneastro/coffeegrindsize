@@ -137,16 +137,16 @@ class coffeegrindsize_GUI:
 		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image,highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		threshold_image_button = Button(toolbar, text="Threshold Image...", command=lambda : self.threshold_image(root),highlightbackground=toolbar_bg)
+		threshold_image_button = Button(toolbar, text="Threshold Image...", command=self.threshold_image,highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		psd_button = Button(toolbar, text="Launch Particle Recognition...", command=lambda : self.launch_psd(root),highlightbackground=toolbar_bg)
+		psd_button = Button(toolbar, text="Launch Particle Recognition...", command=self.launch_psd,highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=lambda : self.create_histogram(root),highlightbackground=toolbar_bg)
+		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=self.create_histogram,highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		save_button = Button(toolbar, text="Save Data...", command=lambda : self.launch_psd(root),highlightbackground=toolbar_bg)
+		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd,highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
 		#Create a menu bar
@@ -156,9 +156,9 @@ class coffeegrindsize_GUI:
 		#Create a FILE submenu
 		subMenu = Menu(menu)
 		menu.add_cascade(label="File", menu=subMenu)
-		subMenu.add_command(label="Open Image...", command=lambda : self.open_image(root))
+		subMenu.add_command(label="Open Image...", command=self.open_image)
 		subMenu.add_separator()
-		subMenu.add_command(label="Python Debugger...", command=lambda : self.pdb_call(root))
+		subMenu.add_command(label="Python Debugger...", command=self.pdb_call)
 		subMenu.add_separator()
 		subMenu.add_command(label="Quit", command=quit)
 
