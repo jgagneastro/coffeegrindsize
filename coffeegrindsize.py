@@ -16,17 +16,9 @@ root.scale = 1.0
 
 root.title("Coffee Particle Size Distribution by Jonathan Gagne")
 
-# class psdButton:
-	
-# 	def __init__(self, master):
-# 		frame = Frame(master)
-# 		frame.pack()
-		
-# 		self.printButton = Button(frame, text="Message", command=self.printMessage)
-# 		self.printButton.pack(side=LEFT)
-
 #Redraw image
 def redraw(master, x=0, y=0):
+        
         if master.image_id:
             image_canvas.delete(master.image_id)
         iw, ih = master.img.size
@@ -37,16 +29,9 @@ def redraw(master, x=0, y=0):
 #Move image
 def move_start(event):
 	image_canvas.scan_mark(event.x, event.y)
+	
 def move_move(event):
 	image_canvas.scan_dragto(event.x, event.y, gain=1)
-
-#windows zoom
-#def zoomer(event):
-#	if (event.delta > 0):
-#		image_canvas.scale("all", event.x, event.y, 1.1, 1.1)
-#	elif (event.delta < 0):
-#		image_canvas.scale("all", event.x, event.y, 0.9, 0.9)
-#	image_canvas.configure(scrollregion = image_canvas.bbox("all"))
 
 def motion(event):
     root.mouse_x, root.mouse_y = event.x, event.y
@@ -124,8 +109,6 @@ def reset_zoom(master):
 	image_canvas.yview_moveto(0)
 	
 	redraw(master, x=canvas_width/2, y=canvas_height/2)
-	#master.image_id = image_canvas.create_image(3, 3, anchor=NW, image=master.image_obj)
-	#image_canvas.scan_dragto(0, 0, gain=1)
 	master.update()
 
 def reset_status(master, status_var):
@@ -134,10 +117,11 @@ def reset_status(master, status_var):
 	master.update()
 	
 def open_image(master,image_canvas):
+	
 	#Update root to avoid problems with file dialog
 	master.update()
 	image_filename = "/Users/gagne/Documents/IDL/IDL_resources/Kinu3.4_1_sub_detection_final.png"
-	#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+	
 	if image_filename != "":
 		
 		master.img = Image.open(image_filename)
@@ -148,12 +132,8 @@ def open_image(master,image_canvas):
 		scale_factor = min(width_factor,height_factor)
 		nx = round(scale_factor*master.img.size[0])
 		ny = round(scale_factor*master.img.size[1])
-		
-		# #Create a shallow copy of the original image for future resizing
-		# master.img_original = master.img
-		
+			
 		# #Resize the image
-		# master.img = master.img.resize((nx,ny), Image.ANTIALIAS)
 		master.image_obj = ImageTk.PhotoImage(master.img)
 		
 		master.noimage_label.pack_forget()
@@ -167,19 +147,11 @@ def open_image(master,image_canvas):
 		master.scanning_anchor_y = 0
 		
 		redraw(master, x=canvas_width/2+3, y=canvas_height/2+3)
-		#redraw(master, x=0, y=0)
-		
-		#image_canvas.scale(ALL, (master.img.size[0]-canvas_width)/2, (master.img.size[1]-canvas_height)/2, master.scale, master.scale)
-		#image_canvas.scale(ALL, 0, 0, 10, 10)
-		#image_canvas.scale(ALL, 10, 10, 0.1, 0.1)
-		#image_canvas.scale(ALL, 10, 10, 0.1, 0.1)
-		#stop()
 		
 		status_var.set("Image opened: "+image_filename)
 		master.update()
 	
 def threshold_image(master):
-	#Update root to avoid problems with file dialog
 	print("Not coded yet")
 	for i in range(12):
 		time.sleep(1)
@@ -188,41 +160,21 @@ def threshold_image(master):
 		
 
 def launch_psd(master):
-	#Update root to avoid problems with file dialog
 	print("Not coded yet")
 	
 def create_histogram(master):
-	#Update root to avoid problems with file dialog
 	print("Not coded yet")
 	
 def save_data(master):
-	#Update root to avoid problems with file dialog
 	print("Not coded yet")
 	
 def quit():
 	print("Not coded yet")
 	pdb.set_trace()
 
-# label1 = Label(root,text="Bla")
-# label1.pack()
-
-# frame_up = Frame(root)
-# frame_up.pack()
-# frame_down = Frame(root)
-# frame_down.pack(side=BOTTOM)
-
-# button1 = Button(frame_up, text="Button 1", fg="red")
-# button2 = Button(frame_up, text="Button 2", fg="blue")
-
-# button1.pack(side=LEFT)
-# button2.pack()
 
 #Create a toolbar
-
 toolbar = Frame(root, bg="gray90")
-
-#open_image_button = Button(toolbar, text="Open Image...", command=lambda : open_image(root))
-#open_image_button.pack(side=LEFT, padx=0, pady=0)
 
 toolbar.pack(side=TOP, fill=X)
 
@@ -312,7 +264,6 @@ min_roundness_entry = Entry(frame_up, textvariable=min_roundness_var, width=widt
 min_roundness_label.grid(row=options_row,sticky=E)
 min_roundness_entry.grid(row=options_row,column=1)
 
-
 options_row += 1
 
 sep1 = Label(frame_up, text="")
@@ -393,14 +344,13 @@ session_name_entry.grid(row=options_row,column=1,columnspan=2,sticky=W)
 
 options_row += 1
 
-
 for i in range(12):
 	sep1 = Label(frame_up, text="")
 	sep1.grid(row=options_row)
 	options_row += 1
 
 button1 = Button(frame_up, text="Reset to Default Parameters", command=lambda : reset_status(root, status_var))
-#button1.bind("<Button-1>",print_name)
+
 button1.grid(row=options_row,column=0)
 
 options_row += 1
@@ -408,26 +358,16 @@ options_row += 1
 reset_zoom_button = Button(frame_up, text="Reset Zoom Parameters", command=lambda : reset_zoom(root))
 reset_zoom_button.grid(row=options_row,column=0)
 
-#reset_zoom
-
 #Canvas for image
 canvas_width = 1000
 canvas_height = 800
-#xpad = 10
-#ypad = 10
 image_canvas_bg = "gray40"
 image_canvas = Canvas(frame_up, width=canvas_width, height=canvas_height, bg=image_canvas_bg)
 image_canvas.grid(row=0,column=3,rowspan=145)
 
 #Prevent the image canvas to shrink when labels are placed in it
 image_canvas.pack_propagate(0)
-#blackline = canvas.create_line(xpad,ypad,canvas_width,ypad)
 
-#if hasattr(root, "image_obj"):
-#	a=1
-#	image_canvas.itemconfig(root.image_id, image = root.image_obj)
-	#root.image_id = image_canvas.create_image(0, 0, anchor=NW, image=root.image_obj)
-#else:
 root.noimage_label = Label(image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=canvas_width, height=canvas_height)
 root.noimage_label.pack(side=LEFT)
 
@@ -447,9 +387,6 @@ histogram_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
 save_button = Button(toolbar, text="Save Data...", command=lambda : launch_psd(root))
 save_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
-
-#if hasattr(root, "image_obj"):
-#	image_canvas.create_image(0, 0, anchor=NW, image=master.image_obj)
 
 #Create a menu bar
 menu = Menu(root)
@@ -472,8 +409,6 @@ image_canvas.bind("<B1-Motion>", move_move)
 #linux scroll
 image_canvas.bind_all("i", zoomerP)
 image_canvas.bind_all("o", zoomerM)
-#windows scroll
-#image_canvas.bind("<MouseWheel>",zoomer)
 
 while True:
     try:
@@ -481,19 +416,3 @@ while True:
         break
     except UnicodeDecodeError:
         pass
-
-#root.mainloop()
-
-#root.update()
-#root.filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
-
-#image_file = root.filename#"/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Kinu_Victor/Kinu3.4_1_sub.png"
-#image_obj = ImageTk.PhotoImage(Image.open(image_file))
-
-#canvas.create_image(0, 0, anchor=NW, image=image_obj)
-
-#photo = PhotoImage(file="/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Kinu_Victor/Kinu3.4_1_sub.png")
-#photo_label = Label(canvas, image=photo)
-#photo_label.pack()
-
-#root.mainloop()
