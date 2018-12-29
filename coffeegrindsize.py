@@ -99,7 +99,10 @@ def open_image(master,image_canvas):
 		master.img = master.img.resize((nx,ny), Image.ANTIALIAS)
 		master.image_obj = ImageTk.PhotoImage(master.img)
 		
+		master.noimage_label.pack_forget()
 		master.image_id = image_canvas.create_image(3, 3, anchor=NW, image=master.image_obj)
+		#image_canvas.itemconfig(master.image_id, image = master.image_obj)
+
 		status_var.set("Image opened: "+image_filename)
 		master.update()
 	
@@ -348,11 +351,13 @@ image_canvas.grid(row=0,column=3,rowspan=145)
 image_canvas.pack_propagate(0)
 #blackline = canvas.create_line(xpad,ypad,canvas_width,ypad)
 
-if hasattr(root, "image_obj"):
-	image_canvas.create_image(0, 0, anchor=NW, image=root.image_obj)
-else:
-	no_image_label = Label(image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=canvas_width, height=canvas_height)
-	no_image_label.pack(side=LEFT)
+#if hasattr(root, "image_obj"):
+#	a=1
+#	image_canvas.itemconfig(root.image_id, image = root.image_obj)
+	#root.image_id = image_canvas.create_image(0, 0, anchor=NW, image=root.image_obj)
+#else:
+root.noimage_label = Label(image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=canvas_width, height=canvas_height)
+root.noimage_label.pack(side=LEFT)
 
 toolbar_padx = 8
 toolbar_pady = 15
