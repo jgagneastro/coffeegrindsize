@@ -351,12 +351,12 @@ for i in range(12):
 
 button1 = Button(frame_up, text="Reset to Default Parameters", command=lambda : reset_status(root, status_var))
 
-button1.grid(row=options_row,column=0)
+button1.grid(row=options_row,column=2,sticky=E)
 
 options_row += 1
 
 reset_zoom_button = Button(frame_up, text="Reset Zoom Parameters", command=lambda : reset_zoom(root))
-reset_zoom_button.grid(row=options_row,column=0)
+reset_zoom_button.grid(row=options_row,column=2,sticky=E)
 
 #Canvas for image
 canvas_width = 1000
