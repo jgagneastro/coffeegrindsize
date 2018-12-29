@@ -11,14 +11,15 @@ def_threshold = 58.8
 class coffeegrindsize_GUI:
 	def __init__(self,root):
 		
-		root.image_id = None
-		root.scale = 1.0
+		self.image_id = None
+		self.scale = 1.0
+		self.master = root
 		
-		root.title("Coffee Particle Size Distribution by Jonathan Gagne")
+		self.master.title("Coffee Particle Size Distribution by Jonathan Gagne")
 		
 		#Create a toolbar
 		toolbar_bg = "gray90"
-		toolbar = Frame(root, bg=toolbar_bg)
+		toolbar = Frame(self.master, bg=toolbar_bg)
 		
 		toolbar.pack(side=TOP, fill=X)
 		
@@ -28,7 +29,7 @@ class coffeegrindsize_GUI:
 		#Create a status bar
 		self.status_var = StringVar()
 		self.status_var.set("Idle...")
-		status = Label(root, textvariable=self.status_var, anchor=W, bg="grey", relief=SUNKEN)
+		status = Label(self.master, textvariable=self.status_var, anchor=W, bg="grey", relief=SUNKEN)
 		status.pack(side=BOTTOM, fill=X)
 		
 		#Adjustable keyword options
@@ -120,7 +121,7 @@ class coffeegrindsize_GUI:
 		options_row += 1
 
 		# Create a Tkinter variable
-		self.histogram_type = StringVar(root)
+		self.histogram_type = StringVar(self.master)
 		 
 		# Dictionary with options
 		#default_choice = 'Number Fraction vs Particle Diameter'
@@ -188,13 +189,13 @@ class coffeegrindsize_GUI:
 			sep1.grid(row=options_row)
 			options_row += 1
 
-		reset_params_button = Button(frame_options, text="Reset to Default Parameters", command=lambda : self.reset_status(root))
+		reset_params_button = Button(frame_options, text="Reset to Default Parameters", command=self.reset_status)
 
 		reset_params_button.grid(row=options_row,column=0)
 
 		options_row += 1
 
-		reset_zoom_button = Button(frame_options, text="Reset Zoom Parameters", command=lambda : self.reset_zoom(root))
+		reset_zoom_button = Button(frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
 		reset_zoom_button.grid(row=options_row,column=0)
 
 		#Canvas for image
@@ -207,12 +208,12 @@ class coffeegrindsize_GUI:
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
 
-		root.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
-		root.noimage_label.pack(side=LEFT)
+		self.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
+		self.noimage_label.pack(side=LEFT)
 
 		toolbar_padx = 6
 		toolbar_pady = 6
-		open_image_button = Button(toolbar, text="Open Image...", command=lambda : self.open_image(root),highlightbackground=toolbar_bg)
+		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image,highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
 		threshold_image_button = Button(toolbar, text="Threshold Image...", command=lambda : self.threshold_image(root),highlightbackground=toolbar_bg)
@@ -267,14 +268,14 @@ class coffeegrindsize_GUI:
 		self.options_row += 1
 	
 	#Redraw image
-	def redraw(self, master, x=0, y=0):
+	def redraw(self, x=0, y=0):
 	        
-	        if master.image_id:
-	            self.image_canvas.delete(master.image_id)
-	        iw, ih = master.img.size
-	        size = int(iw * master.scale), int(ih * master.scale)
-	        master.image_obj = ImageTk.PhotoImage(master.img.resize(size))
-	        master.image_id = self.image_canvas.create_image(x, y, image=master.image_obj)
+	        if self.image_id:
+	            self.image_canvas.delete(self.image_id)
+	        iw, ih = self.img.size
+	        size = int(iw * self.scale), int(ih * self.scale)
+	        self.image_obj = ImageTk.PhotoImage(self.img.resize(size))
+	        self.image_id = self.image_canvas.create_image(x, y, image=self.image_obj)
 	        
 	#Move image
 	def move_start(self, event):
@@ -284,92 +285,92 @@ class coffeegrindsize_GUI:
 		self.image_canvas.scan_dragto(event.x, event.y, gain=1)
 
 	def motion(self, event):
-	    root.mouse_x, root.mouse_y = event.x, event.y
+	    self.mouse_x, self.mouse_y = event.x, event.y
 
 	#linux zoom
 	def zoomerP(self, event):
 		
 		#Get current coordinates of image
-		image_x, image_y = self.image_canvas.coords(root.image_id)
+		image_x, image_y = self.image_canvas.coords(self.image_id)
 		
 		#Include effect of drag
 		image_x -= self.image_canvas.canvasx(0)
 		image_y -= self.image_canvas.canvasy(0)
 		
 		#Get original image size
-		orig_nx, orig_ny = root.img.size
+		orig_nx, orig_ny = self.img.size
 		
 		#Determine cursor position on original image coordinates (x,y -> alpha, beta)
-		mouse_alpha = orig_nx/2 + (root.mouse_x-image_x)/root.scale
-		mouse_beta = orig_ny/2 + (root.mouse_y-image_y)/root.scale
+		mouse_alpha = orig_nx/2 + (self.mouse_x-image_x)/self.scale
+		mouse_beta = orig_ny/2 + (self.mouse_y-image_y)/self.scale
 		
 		#Change the scale of image
-		root.scale *= 2
+		self.scale *= 2
 		
 		#Determine pixel position for the center of the new zoomed image
-		new_image_x = root.mouse_x - (mouse_alpha - orig_nx/2)*root.scale
-		new_image_y = root.mouse_y - (mouse_beta - orig_ny/2)*root.scale
+		new_image_x = self.mouse_x - (mouse_alpha - orig_nx/2)*self.scale
+		new_image_y = self.mouse_y - (mouse_beta - orig_ny/2)*self.scale
 		
 		#Include effect of drag
 		new_image_x += self.image_canvas.canvasx(0)
 		new_image_y += self.image_canvas.canvasy(0)
 		
 		#Redraw image at the desired position
-		self.redraw(root, x=new_image_x, y=new_image_y)
+		self.redraw(x=new_image_x, y=new_image_y)
 		
 	def zoomerM(self, event):
 		
 		#Get current coordinates of image
-		image_x, image_y = self.image_canvas.coords(root.image_id)
+		image_x, image_y = self.image_canvas.coords(self.image_id)
 		
 		#Include effect of drag
 		image_x -= self.image_canvas.canvasx(0)
 		image_y -= self.image_canvas.canvasy(0)
 		
 		#Get original image size
-		orig_nx, orig_ny = root.img.size
+		orig_nx, orig_ny = self.img.size
 		
 		#Determine cursor position on original image coordinates (x,y -> alpha, beta)
-		mouse_alpha = orig_nx/2 + (root.mouse_x-image_x)/root.scale
-		mouse_beta = orig_ny/2 + (root.mouse_y-image_y)/root.scale
+		mouse_alpha = orig_nx/2 + (self.mouse_x-image_x)/self.scale
+		mouse_beta = orig_ny/2 + (self.mouse_y-image_y)/self.scale
 		
 		#Change the scale of image
-		root.scale *= 0.5
+		self.scale *= 0.5
 		
 		#Determine pixel position for the center of the new zoomed image
-		new_image_x = root.mouse_x - (mouse_alpha - orig_nx/2)*root.scale
-		new_image_y = root.mouse_y - (mouse_beta - orig_ny/2)*root.scale
+		new_image_x = self.mouse_x - (mouse_alpha - orig_nx/2)*self.scale
+		new_image_y = self.mouse_y - (mouse_beta - orig_ny/2)*self.scale
 		
 		#Include effect of drag
 		new_image_x += self.image_canvas.canvasx(0)
 		new_image_y += self.image_canvas.canvasy(0)
 		
 		#Redraw image at the desired position
-		self.redraw(root, x=new_image_x, y=new_image_y)
+		self.redraw(x=new_image_x, y=new_image_y)
 
-	def pdb_call(self, master):
+	def pdb_call(self):
 		pdb.set_trace()
 
-	def reset_zoom(self, master):
+	def reset_zoom(self):
 		self.status_var.set("Zoom Parameters Reset to Defaults...")
-		master.scale = master.original_scale
+		self.scale = self.original_scale
 		
 		#Reset the effect of dragging
 		self.image_canvas.xview_moveto(0)
 		self.image_canvas.yview_moveto(0)
 		
-		self.redraw(master, x=self.canvas_width/2, y=self.canvas_height/2)
-		master.update()
+		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+		self.master.update()
 
-	def reset_status(self, master):
+	def reset_status(self):
 		self.status_var.set("Parameters Reset to Defaults...")
 		self.threshold_var.set(str(def_threshold))
-		master.update()
+		self.master.update()
 		
-	def open_image(self, master):
+	def open_image(self):
 		
 		#Update root to avoid problems with file dialog
-		master.update()
+		self.master.update()
 		image_filename = "/Users/gagne/Documents/IDL/IDL_resources/Kinu3.4_1_sub_detection_final.png"
 		
 		#Do not delete
@@ -377,49 +378,45 @@ class coffeegrindsize_GUI:
 		
 		if image_filename != "":
 			
-			master.img = Image.open(image_filename)
+			self.img = Image.open(image_filename)
 			
 			#Resize image to canvas size
-			width_factor = self.canvas_width/master.img.size[0]
-			height_factor = self.canvas_height/master.img.size[1]
+			width_factor = self.canvas_width/self.img.size[0]
+			height_factor = self.canvas_height/self.img.size[1]
 			scale_factor = min(width_factor,height_factor)
-			nx = round(scale_factor*master.img.size[0])
-			ny = round(scale_factor*master.img.size[1])
+			nx = round(scale_factor*self.img.size[0])
+			ny = round(scale_factor*self.img.size[1])
 				
 			# #Resize the image
-			master.image_obj = ImageTk.PhotoImage(master.img)
+			self.image_obj = ImageTk.PhotoImage(self.img)
 			
-			master.noimage_label.pack_forget()
+			self.noimage_label.pack_forget()
 			
-			master.scale = scale_factor
-			master.original_scale = scale_factor
+			self.scale = scale_factor
+			self.original_scale = scale_factor
 			
-			#Set a scanning anchor for drawing of image
-			master.scanning_anchor_x = 0
-			master.scanning_anchor_y = 0
-			
-			self.redraw(master, x=self.canvas_width/2+3, y=self.canvas_height/2+3)
+			self.redraw(x=self.canvas_width/2+3, y=self.canvas_height/2+3)
 			
 			self.status_var.set("Image opened: "+image_filename)
-			master.update()
+			self.master.update()
 		
-	def threshold_image(self, master):
+	def threshold_image(self):
 		print("Not coded yet")
 		for i in range(12):
 			time.sleep(1)
 			self.status_var.set("Iteration #"+str(i))
-			master.update()
+			self.master.update()
 			
-	def launch_psd(self, master):
+	def launch_psd(self):
 		print("Not coded yet")
 		
-	def create_histogram(self, master):
+	def create_histogram(self):
 		print("Not coded yet")
 		
-	def save_data(self, master):
+	def save_data(self):
 		print("Not coded yet")
 		
-	def quit(self, master):
+	def quit(self):
 		print("Not coded yet")
 		pdb.set_trace()
 
