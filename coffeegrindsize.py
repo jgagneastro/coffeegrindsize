@@ -33,11 +33,8 @@ def redraw(master, x=0, y=0):
         size = int(iw * master.scale), int(ih * master.scale)
         master.image_obj = ImageTk.PhotoImage(master.img.resize(size))
         master.image_id = image_canvas.create_image(x, y, image=master.image_obj)
-
-        # tell the canvas to scale up/down the vector objects as well
-        image_canvas.scale(ALL, x, y, master.scale, master.scale)
-
-#move
+        
+#Move image
 def move_start(event):
 	image_canvas.scan_mark(event.x, event.y)
 def move_move(event):
@@ -51,28 +48,83 @@ def move_move(event):
 #		image_canvas.scale("all", event.x, event.y, 0.9, 0.9)
 #	image_canvas.configure(scrollregion = image_canvas.bbox("all"))
 
+def motion(event):
+    root.mouse_x, root.mouse_y = event.x, event.y
+
 #linux zoom
 def zoomerP(event):
+	
+	#Get current coordinates of image
+	image_x, image_y = image_canvas.coords(root.image_id)
+	
+	#Include effect of drag
+	image_x -= image_canvas.canvasx(0)
+	image_y -= image_canvas.canvasy(0)
+	
+	#Get original image size
+	orig_nx, orig_ny = root.img.size
+	
+	#Determine cursor position on original image coordinates (x,y -> alpha, beta)
+	mouse_alpha = orig_nx/2 + (root.mouse_x-image_x)/root.scale
+	mouse_beta = orig_ny/2 + (root.mouse_y-image_y)/root.scale
+	
+	#Change the scale of image
 	root.scale *= 2
-	redraw(root, x=event.x, y=event.y)
-	#photo = photo.zoom(x=scale, y=scale)
-	#image_canvas.resize("all", event.x, event.y, 1.1, 1.1)
-	#image_canvas.configure(scrollregion = image_canvas.bbox("all"))
+	
+	#Determine pixel position for the center of the new zoomed image
+	new_image_x = root.mouse_x - (mouse_alpha - orig_nx/2)*root.scale
+	new_image_y = root.mouse_y - (mouse_beta - orig_ny/2)*root.scale
+	
+	#Include effect of drag
+	new_image_x += image_canvas.canvasx(0)
+	new_image_y += image_canvas.canvasy(0)
+	
+	#Redraw image at the desired position
+	redraw(root, x=new_image_x, y=new_image_y)
+	
 def zoomerM(event):
+	
+	#Get current coordinates of image
+	image_x, image_y = image_canvas.coords(root.image_id)
+	
+	#Include effect of drag
+	image_x -= image_canvas.canvasx(0)
+	image_y -= image_canvas.canvasy(0)
+	
+	#Get original image size
+	orig_nx, orig_ny = root.img.size
+	
+	#Determine cursor position on original image coordinates (x,y -> alpha, beta)
+	mouse_alpha = orig_nx/2 + (root.mouse_x-image_x)/root.scale
+	mouse_beta = orig_ny/2 + (root.mouse_y-image_y)/root.scale
+	
+	#Change the scale of image
 	root.scale *= 0.5
-	redraw(root, x=event.x, y=event.y)
-	#print("BLABLA2")
-	#image_canvas.scale("all", event.x, event.y, 0.9, 0.9)
-	#image_canvas.configure(scrollregion = image_canvas.bbox("all"))
+	
+	#Determine pixel position for the center of the new zoomed image
+	new_image_x = root.mouse_x - (mouse_alpha - orig_nx/2)*root.scale
+	new_image_y = root.mouse_y - (mouse_beta - orig_ny/2)*root.scale
+	
+	#Include effect of drag
+	new_image_x += image_canvas.canvasx(0)
+	new_image_y += image_canvas.canvasy(0)
+	
+	#Redraw image at the desired position
+	redraw(root, x=new_image_x, y=new_image_y)
 
 def pdb_call(master):
 	pdb.set_trace()
 
 def reset_zoom(master):
 	status_var.set("Zoom Parameters Reset to Defaults...")
-	master.scale = 1
-	redraw(master, x=0, y=0)
-	master.image_id = image_canvas.create_image(3, 3, anchor=NW, image=master.image_obj)
+	master.scale = master.original_scale
+	
+	#Reset the effect of dragging
+	image_canvas.xview_moveto(0)
+	image_canvas.yview_moveto(0)
+	
+	redraw(master, x=canvas_width/2, y=canvas_height/2)
+	#master.image_id = image_canvas.create_image(3, 3, anchor=NW, image=master.image_obj)
 	#image_canvas.scan_dragto(0, 0, gain=1)
 	master.update()
 
@@ -84,7 +136,8 @@ def reset_status(master, status_var):
 def open_image(master,image_canvas):
 	#Update root to avoid problems with file dialog
 	master.update()
-	image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+	image_filename = "/Users/gagne/Documents/IDL/IDL_resources/Kinu3.4_1_sub_detection_final.png"
+	#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
 	if image_filename != "":
 		
 		master.img = Image.open(image_filename)
@@ -96,13 +149,32 @@ def open_image(master,image_canvas):
 		nx = round(scale_factor*master.img.size[0])
 		ny = round(scale_factor*master.img.size[1])
 		
-		master.img = master.img.resize((nx,ny), Image.ANTIALIAS)
+		# #Create a shallow copy of the original image for future resizing
+		# master.img_original = master.img
+		
+		# #Resize the image
+		# master.img = master.img.resize((nx,ny), Image.ANTIALIAS)
 		master.image_obj = ImageTk.PhotoImage(master.img)
 		
 		master.noimage_label.pack_forget()
-		master.image_id = image_canvas.create_image(3, 3, anchor=NW, image=master.image_obj)
-		#image_canvas.itemconfig(master.image_id, image = master.image_obj)
-
+		#master.image_id = image_canvas.create_image(0, 0, anchor=CENTER, image=master.image_obj)
+		
+		master.scale = scale_factor
+		master.original_scale = scale_factor
+		
+		#Set a scanning anchor for drawing of image
+		master.scanning_anchor_x = 0
+		master.scanning_anchor_y = 0
+		
+		redraw(master, x=canvas_width/2+3, y=canvas_height/2+3)
+		#redraw(master, x=0, y=0)
+		
+		#image_canvas.scale(ALL, (master.img.size[0]-canvas_width)/2, (master.img.size[1]-canvas_height)/2, master.scale, master.scale)
+		#image_canvas.scale(ALL, 0, 0, 10, 10)
+		#image_canvas.scale(ALL, 10, 10, 0.1, 0.1)
+		#image_canvas.scale(ALL, 10, 10, 0.1, 0.1)
+		#stop()
+		
 		status_var.set("Image opened: "+image_filename)
 		master.update()
 	
@@ -393,6 +465,8 @@ subMenu.add_separator()
 subMenu.add_command(label="Quit", command=quit)
 
 #Create zoom options
+image_canvas.bind('<Motion>', motion)
+
 image_canvas.bind("<ButtonPress-1>", move_start)
 image_canvas.bind("<B1-Motion>", move_move)
 #linux scroll
