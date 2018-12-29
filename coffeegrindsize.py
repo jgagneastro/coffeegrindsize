@@ -17,7 +17,8 @@ class coffeegrindsize_GUI:
 		root.title("Coffee Particle Size Distribution by Jonathan Gagne")
 		
 		#Create a toolbar
-		toolbar = Frame(root, bg="gray90")
+		toolbar_bg = "gray90"
+		toolbar = Frame(root, bg=toolbar_bg)
 		
 		toolbar.pack(side=TOP, fill=X)
 		
@@ -27,7 +28,7 @@ class coffeegrindsize_GUI:
 		#Create a status bar
 		self.status_var = StringVar()
 		self.status_var.set("Idle...")
-		status = Label(root, textvariable=self.status_var, anchor=W, bg="grey")#, relief=SUNKEN
+		status = Label(root, textvariable=self.status_var, anchor=W, bg="grey", relief=SUNKEN)
 		status.pack(side=BOTTOM, fill=X)
 		
 		#Adjustable keyword options
@@ -187,14 +188,14 @@ class coffeegrindsize_GUI:
 			sep1.grid(row=options_row)
 			options_row += 1
 
-		button1 = Button(frame_options, text="Reset to Default Parameters", command=lambda : self.reset_status(root))
+		reset_params_button = Button(frame_options, text="Reset to Default Parameters", command=lambda : self.reset_status(root))
 
-		button1.grid(row=options_row,column=2,sticky=E)
+		reset_params_button.grid(row=options_row,column=0)
 
 		options_row += 1
 
 		reset_zoom_button = Button(frame_options, text="Reset Zoom Parameters", command=lambda : self.reset_zoom(root))
-		reset_zoom_button.grid(row=options_row,column=2,sticky=E)
+		reset_zoom_button.grid(row=options_row,column=0)
 
 		#Canvas for image
 		self.canvas_width = 1000
@@ -209,21 +210,21 @@ class coffeegrindsize_GUI:
 		root.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
 		root.noimage_label.pack(side=LEFT)
 
-		toolbar_padx = 8
-		toolbar_pady = 15
-		open_image_button = Button(toolbar, text="Open Image...", command=lambda : self.open_image(root))
+		toolbar_padx = 6
+		toolbar_pady = 6
+		open_image_button = Button(toolbar, text="Open Image...", command=lambda : self.open_image(root),highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		threshold_image_button = Button(toolbar, text="Threshold Image...", command=lambda : self.threshold_image(root))
+		threshold_image_button = Button(toolbar, text="Threshold Image...", command=lambda : self.threshold_image(root),highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		psd_button = Button(toolbar, text="Launch Particle Recognition...", command=lambda : self.launch_psd(root))
+		psd_button = Button(toolbar, text="Launch Particle Recognition...", command=lambda : self.launch_psd(root),highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=lambda : self.create_histogram(root))
+		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=lambda : self.create_histogram(root),highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
-		save_button = Button(toolbar, text="Save Data...", command=lambda : self.launch_psd(root))
+		save_button = Button(toolbar, text="Save Data...", command=lambda : self.launch_psd(root),highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=toolbar_padx, pady=toolbar_pady)
 
 		#Create a menu bar
