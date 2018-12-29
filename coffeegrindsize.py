@@ -7,6 +7,13 @@ stop = pdb.set_trace
 
 #Default Parameters
 def_threshold = 58.8
+def_pixel_scale = 0.177
+def_max_cluster_axis = 500
+def_min_surface = 2
+def_min_roundness = 0
+def_min_x_axis = 0
+def_max_x_axis = 1000
+def_session_name = "JG_PSD"
 
 class coffeegrindsize_GUI:
 	def __init__(self,root):
@@ -23,8 +30,8 @@ class coffeegrindsize_GUI:
 		
 		toolbar.pack(side=TOP, fill=X)
 		
-		frame_options = Frame(root)#, width=1200, height=1250
-		frame_options.pack()
+		self.frame_options = Frame(root)#, width=1200, height=1250
+		self.frame_options.pack()
 		
 		#Create a status bar
 		self.status_var = StringVar()
@@ -33,176 +40,90 @@ class coffeegrindsize_GUI:
 		status.pack(side=BOTTOM, fill=X)
 		
 		#Adjustable keyword options
-		options_row = 1
-		width_entries = 6
-		title_padx = 12
+		self.options_row = 1
+		self.width_entries = 6
+		self.title_padx = 12
 		
-		sep1 = Label(frame_options, text="")
-		sep1.grid(row=options_row)
+		sep1 = Label(self.frame_options, text="")
+		sep1.grid(row=self.options_row)
 		
-		options_row += 1
+		self.options_row += 1
 		
-		sep1 = Label(frame_options, text="Threshold Step:", font='Helvetica 18 bold')
-		sep1.grid(row=options_row, sticky=W, padx=title_padx)
+		sep1 = Label(self.frame_options, text="Threshold Step:", font='Helvetica 18 bold')
+		sep1.grid(row=self.options_row, sticky=W, padx=self.title_padx)
 
-		options_row += 1
+		self.options_row += 1
+		
+		#Options menu
+		
+		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%")
+		
+		self.label_separator()
+		
+		self.label_title("Particle Recognition Step:")
+		
+		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "mm/pix")
+		
+		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix")
+		
+		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix^2")
+		
+		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
 
-		self.threshold_var = StringVar()
-		self.threshold_var.set(str(def_threshold))
-		threshold_label = Label(frame_options, text="Threshold:")
-		threshold_entry = Entry(frame_options, textvariable=self.threshold_var, width=width_entries)
-		threshold_label_units = Label(frame_options, text="%")
-		threshold_label.grid(row=options_row,sticky=E)
-		threshold_entry.grid(row=options_row,column=1)
-		threshold_label_units.grid(row=options_row,column=2,sticky=W)
-
-		options_row += 1
-
-		sep1 = Label(frame_options, text="")
-		sep1.grid(row=options_row)
-
-		options_row += 1
-
-		sep1 = Label(frame_options, text="Particle Recognition Step:", font='Helvetica 18 bold')
-		sep1.grid(row=options_row, sticky=W, padx=title_padx)
-
-		options_row += 1
-
-		pixel_scale_var = StringVar()
-		pixel_scale_var.set("0.177")
-		pixel_scale_label = Label(frame_options, text="Pixel Scale:")
-		pixel_scale_entry = Entry(frame_options, textvariable=pixel_scale_var, width=width_entries)
-		pixel_scale_label_units = Label(frame_options, text="mm/pix")
-		pixel_scale_label.grid(row=options_row,sticky=E)
-		pixel_scale_entry.grid(row=options_row,column=1)
-		pixel_scale_label_units.grid(row=options_row,column=2,sticky=W)
-
-		options_row += 1
-
-		max_cluster_axis_var = StringVar()
-		max_cluster_axis_var.set("500")
-		max_cluster_axis_label = Label(frame_options, text="Maximum Cluster Diameter:")
-		max_cluster_axis_entry = Entry(frame_options, textvariable=max_cluster_axis_var, width=width_entries)
-		max_cluster_axis_label_units = Label(frame_options, text="pix")
-		max_cluster_axis_label.grid(row=options_row,sticky=E)
-		max_cluster_axis_entry.grid(row=options_row,column=1)
-		max_cluster_axis_label_units.grid(row=options_row,column=2,sticky=W)
-
-		options_row += 1
-
-		min_surface_var = StringVar()
-		min_surface_var.set("2")
-		min_surface_label = Label(frame_options, text="Minimum Cluster Surface:")
-		min_surface_entry = Entry(frame_options, textvariable=min_surface_var, width=width_entries)
-		min_surface_label_units = Label(frame_options, text="pix^2")
-		min_surface_label.grid(row=options_row,sticky=E)
-		min_surface_entry.grid(row=options_row,column=1)
-		min_surface_label_units.grid(row=options_row,column=2,sticky=W)
-
-		options_row += 1
-
-		min_roundness_var = StringVar()
-		min_roundness_var.set("0")
-		min_roundness_label = Label(frame_options, text="Minimum Roundness:")
-		min_roundness_entry = Entry(frame_options, textvariable=min_roundness_var, width=width_entries)
-		min_roundness_label.grid(row=options_row,sticky=E)
-		min_roundness_entry.grid(row=options_row,column=1)
-
-		options_row += 1
-
-		sep1 = Label(frame_options, text="")
-		sep1.grid(row=options_row)
-
-		options_row += 1
-
-		sep1 = Label(frame_options, text="Histogram Options:", font='Helvetica 18 bold')
-		sep1.grid(row=options_row,sticky=W, padx=title_padx)
-
-		options_row += 1
-
-		# Create a Tkinter variable
+		self.label_separator()
+		
+		self.label_title("Histogram Options:")
+		
 		self.histogram_type = StringVar(self.master)
-		 
-		# Dictionary with options
+		
 		#default_choice = 'Number Fraction vs Particle Diameter'
 		#choices = { 'Number Fraction vs Particle Diameter','Extracted Fraction vs Particle Surface','Surface Fraction vs Particle Surface'}
 		default_choice = 'NumDiam'
 		choices = { 'NumDiam', 'NumSurf'}
 		self.histogram_type.set(default_choice) # set the default option
 		 
-		histogram_type_label = Label(frame_options, text="Histogram Type:")
-		histogram_type_menu = OptionMenu(frame_options, self.histogram_type, *choices)
-		histogram_type_label.grid(row=options_row,sticky=E)
-		histogram_type_menu.grid(row=options_row,column=1,columnspan=2,sticky=W)
+		histogram_type_label = Label(self.frame_options, text="Histogram Type:")
+		histogram_type_menu = OptionMenu(self.frame_options, self.histogram_type, *choices)
+		histogram_type_label.grid(row=self.options_row,sticky=E)
+		histogram_type_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
 		
 		# link function to change dropdown
 		self.histogram_type.trace('w', self.change_dropdown_histogram_type)
 
-		options_row += 1
-
-		xmin_var = StringVar()
-		xmin_var.set("0")
-		xmin_label = Label(frame_options, text="Minimum X Axis:")
-		xmin_entry = Entry(frame_options, textvariable=xmin_var, width=width_entries)
-		xmin_label.grid(row=options_row,sticky=E)
-		xmin_entry.grid(row=options_row,column=1)
-
-		options_row += 1
-
-		xmax_var = StringVar()
-		xmax_var.set("1000")
-		xmax_label = Label(frame_options, text="Maximum X Axis:")
-		xmax_entry = Entry(frame_options, textvariable=xmax_var, width=width_entries)
-		xmax_label.grid(row=options_row,sticky=E)
-		xmax_entry.grid(row=options_row,column=1)
-
-		options_row += 1
-
+		self.options_row += 1
+		
+		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
+		
+		self.xmax_var = self.label_entry(def_max_x_axis, "Maximum X Axis:", "")
+		
 		xlog_var = IntVar()
 		xlog_var.set(1)
-		checkbox1 = Checkbutton(frame_options, text="Logarithmic X axis",variable=xlog_var)
-		checkbox1.grid(row=options_row,columnspan=2,sticky=E)
+		checkbox1 = Checkbutton(self.frame_options, text="Logarithmic X axis",variable=xlog_var)
+		checkbox1.grid(row=self.options_row,columnspan=2,sticky=E)
 
-		options_row += 1
-
-		sep1 = Label(frame_options, text="")
-		sep1.grid(row=options_row)
-
-		options_row += 1
-
-		sep1 = Label(frame_options, text="Output Options:", font='Helvetica 18 bold')
-		sep1.grid(row=options_row,sticky=W, padx=title_padx)
-
-		options_row += 1
-
-		session_name_var = StringVar()
-		session_name_var.set("JG_PSD")
-		session_name_label = Label(frame_options, text="Base of File Names:")
-		session_name_entry = Entry(frame_options, textvariable=session_name_var, width=width_entries*3)
-		session_name_label.grid(row=options_row,sticky=E)
-		session_name_entry.grid(row=options_row,column=1,columnspan=2,sticky=W)
-
-		options_row += 1
-
+		self.options_row += 1
+		
+		self.label_separator()
+		
+		self.label_title("Output Options:")
+		
+		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
+		
 		for i in range(12):
-			sep1 = Label(frame_options, text="")
-			sep1.grid(row=options_row)
-			options_row += 1
+			self.label_separator()
 
-		reset_params_button = Button(frame_options, text="Reset to Default Parameters", command=self.reset_status)
+		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
+		reset_params_button.grid(row=self.options_row,column=0)
+		self.options_row += 1
 
-		reset_params_button.grid(row=options_row,column=0)
-
-		options_row += 1
-
-		reset_zoom_button = Button(frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
-		reset_zoom_button.grid(row=options_row,column=0)
+		reset_zoom_button = Button(self.frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
+		reset_zoom_button.grid(row=self.options_row,column=0)
 
 		#Canvas for image
 		self.canvas_width = 1000
 		self.canvas_height = 800
 		image_canvas_bg = "gray40"
-		self.image_canvas = Canvas(frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
+		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
 		self.image_canvas.grid(row=0,column=3,rowspan=145)
 
 		#Prevent the image canvas to shrink when labels are placed in it
@@ -254,17 +175,32 @@ class coffeegrindsize_GUI:
 	def change_dropdown_histogram_type(self, *args):
 		print(self.histogram_type.get())
 	
-	def label_entry(self, default_var, text, units_text):
-	
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None):
+		
+		if width is None:
+			width = self.width_entries
+		
 		data_var = StringVar()
-		data_var.set(default_var)
+		data_var.set(str(default_var))
 		data_label = Label(self.frame_options, text=text)
-		data_entry = Entry(self.frame_options, textvariable=data_var, width=self.width_entries)
+		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
 		data_label_units = Label(self.frame_options, text=units_text)
 		data_label.grid(row=self.options_row,sticky=E)
-		data_entry.grid(row=self.options_row,column=1)
+		data_entry.grid(row=self.options_row,column=1,columnspan=columnspan)
 		data_label_units.grid(row=self.options_row,column=2,sticky=W)
 		
+		self.options_row += 1
+		
+		return data_var
+	
+	def label_title(self, text):
+		title_label = Label(self.frame_options, text=text, font='Helvetica 18 bold')
+		title_label.grid(row=self.options_row, sticky=W, padx=self.title_padx)
+		self.options_row += 1
+	
+	def label_separator(self):
+		separator_label = Label(self.frame_options, text="")
+		separator_label.grid(row=self.options_row)
 		self.options_row += 1
 	
 	#Redraw image
@@ -365,6 +301,13 @@ class coffeegrindsize_GUI:
 	def reset_status(self):
 		self.status_var.set("Parameters Reset to Defaults...")
 		self.threshold_var.set(str(def_threshold))
+		self.pixel_scale_var.set(str(def_pixel_scale))
+		self.max_cluster_axis_var.set(str(def_max_cluster_axis))
+		self.min_surface_var.set(str(def_min_surface))
+		self.min_roundness_var.set(str(def_min_roundness))
+		self.xmin_var.set(str(def_min_x_axis))
+		self.xmax_var.set(str(def_max_x_axis))
+		self.session_name_var.set(str(def_session_name))
 		self.master.update()
 		
 	def open_image(self):
