@@ -48,6 +48,9 @@ class coffeegrindsize_GUI:
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
 		
+		#This variable controls the zoom directionality (+1 in/-1 out)
+		self.zoom_dir = 0
+		
 		#Remember the root object for the full user interface so that the methods of coffeegrindsize_GUI can refer to it
 		self.master = root
 		
@@ -241,8 +244,8 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind("<B1-Motion>", self.move_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
-		self.image_canvas.bind_all("i", self.zoomerP)
-		self.image_canvas.bind_all("o", self.zoomerM)
+		self.image_canvas.bind_all("i", self.zoom_in)
+		self.image_canvas.bind_all("o", self.zoom_out)
 	
 	#Method to register changes in the histogram type option
 	def change_dropdown_histogram_type(self, *args):
@@ -315,38 +318,19 @@ class coffeegrindsize_GUI:
 	    self.mouse_x, self.mouse_y = event.x, event.y
 
 	#Method to apply a zoom in
-	def zoomerP(self, event):
+	def zoom_in(self, event):
 		
-		#Get current coordinates of image
-		image_x, image_y = self.image_canvas.coords(self.image_id)
+		#Apply zoom in the positive direction
+		self.zoom(event, 1)
 		
-		#Include effect of drag
-		image_x -= self.image_canvas.canvasx(0)
-		image_y -= self.image_canvas.canvasy(0)
+	#Method to apply a zoom in
+	def zoom_out(self, event):
 		
-		#Get original image size
-		orig_nx, orig_ny = self.img.size
-		
-		#Determine cursor position on original image coordinates (x,y -> alpha, beta)
-		mouse_alpha = orig_nx/2 + (self.mouse_x-image_x)/self.scale
-		mouse_beta = orig_ny/2 + (self.mouse_y-image_y)/self.scale
-		
-		#Change the scale of image
-		self.scale *= 2
-		
-		#Determine pixel position for the center of the new zoomed image
-		new_image_x = self.mouse_x - (mouse_alpha - orig_nx/2)*self.scale
-		new_image_y = self.mouse_y - (mouse_beta - orig_ny/2)*self.scale
-		
-		#Include effect of drag
-		new_image_x += self.image_canvas.canvasx(0)
-		new_image_y += self.image_canvas.canvasy(0)
-		
-		#Redraw image at the desired position
-		self.redraw(x=new_image_x, y=new_image_y)
+		#Apply zoom in the positive direction
+		self.zoom(event, -1)
 	
-	#Method to apply a zoom out
-	def zoomerM(self, event):
+	#Method to apply a zoom in any direction
+	def zoom(self, event, directionality):
 		
 		#Get current coordinates of image
 		image_x, image_y = self.image_canvas.coords(self.image_id)
@@ -362,8 +346,11 @@ class coffeegrindsize_GUI:
 		mouse_alpha = orig_nx/2 + (self.mouse_x-image_x)/self.scale
 		mouse_beta = orig_ny/2 + (self.mouse_y-image_y)/self.scale
 		
-		#Change the scale of image
-		self.scale *= 0.5
+		#Change the scale of image according to directionality
+		if directionality > 0:
+			self.scale *= 2
+		if directionality < 0:
+			self.scale /= 2
 		
 		#Determine pixel position for the center of the new zoomed image
 		new_image_x = self.mouse_x - (mouse_alpha - orig_nx/2)*self.scale
