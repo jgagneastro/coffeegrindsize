@@ -35,6 +35,11 @@ def_max_x_axis = 1000
 #Default name for the session (used for output filenames)
 def_session_name = "JG_PSD"
 
+original_image_display_name = "Original"
+threshold_image_display_name = "Thresholded"
+outlines_image_display_name = "Cluster Outlines"
+histogram_image_display_name = "Histograms"
+
 #Python class for the user interface window
 class coffeegrindsize_GUI:
 	
@@ -45,6 +50,13 @@ class coffeegrindsize_GUI:
 		
 		#This variable will contain the object of the image currently displayed
 		self.image_id = None
+		
+		#These variables will contain various PIL images
+		self.img = None
+		self.img_source = None
+		self.img_threshold = None
+		self.img_clusters = None
+		self.img_histogram = None
 		
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
@@ -122,8 +134,8 @@ class coffeegrindsize_GUI:
 
 		self.label_separator()
 		
-		choices = ['NumDiam', 'NumSurf']
-		self.histogram_type = self.dropdown_entry("Histogram Options:", choices, self.change_dropdown_histogram_type)
+		choices = ["Number vs Diameter", "Number vs Surface", "Mass vs Diameter", "Mass vs Surface", "Extract vs Diameter", "Extract vs Surface", "Surface vs Diameter", "Surface vs Surface", "Extraction Yield Distribution"]
+		self.histogram_type = self.dropdown_entry("Histogram Options:", choices, self.change_histogram_type)
 		
 		#X axis range for the histogram figure
 		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
@@ -151,9 +163,14 @@ class coffeegrindsize_GUI:
 		#All options related to image display
 		self.label_title("Display Options:")
 		
-		#Select the figure type
-		#The base of the output file names
-		#self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
+		#Select the display type
+		choices = [original_image_display_name, threshold_image_display_name, outlines_image_display_name, histogram_image_display_name]
+		self.display_type = self.dropdown_entry("Display Type:", choices, self.change_display_type)
+		
+		#Button for resetting zoom in the displayed image
+		reset_zoom_button = Button(self.frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
+		reset_zoom_button.grid(row=self.options_row, column=1, columnspan=2)
+		self.options_row += 1
 		
 		#Add a few horizontal spaces
 		for i in range(12):
@@ -163,10 +180,6 @@ class coffeegrindsize_GUI:
 		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row,column=0)
 		self.options_row += 1
-		
-		#Button for resetting zoom in the displayed image
-		reset_zoom_button = Button(self.frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
-		reset_zoom_button.grid(row=self.options_row,column=0)
 
 		# === Create a canvas to display images and figures ===
 		
@@ -245,10 +258,73 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind_all("o", self.zoom_out)
 	
 	#Method to register changes in the histogram type option
-	def change_dropdown_histogram_type(self, *args):
+	def change_histogram_type(self, *args):
 		#This is not coded yet
 		print(self.histogram_type.get())
 	
+	def change_display_type(self, *args):
+		
+		#Verify that original image is loaded
+		if self.display_type.get() == original_image_display_name:
+			if self.img_source == None:
+				
+				#Update the user interface status
+				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Verify that thresholded image is loaded
+		if self.display_type.get() == threshold_image_display_name:
+			if self.img_threshold == None:
+				
+				#Update the user interface status
+				self.status_var.set("Thresholded Image not Available Yet... Use Threshold Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Verify that cluster outlines image is loaded
+		if self.display_type.get() == outlines_image_display_name:
+			if self.img_clusters == None:
+				
+				#Update the user interface status
+				self.status_var.set("Cluster Outlines Image not Available Yet... Use Launch Particle Detection Analysis Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Verify that cluster outlines image is loaded
+		if self.display_type.get() == histogram_image_display_name:
+			if self.img_histogram == None:
+				
+				#Update the user interface status
+				self.status_var.set("Histogram Figure not Available Yet... Use Create Histogram Figure Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Redraw the selected image
+		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+		
+		#Update the user interface status
+		self.status_var.set("Changed Display to "+self.display_type.get()+"...")
+		
+		#Update the user interface
+		self.master.update()
+		
 	def dropdown_entry(self, label, choices, method, default_choice_index=0):
 		
 		#Create a variable that will be bound to the dropdown menu
@@ -263,7 +339,7 @@ class coffeegrindsize_GUI:
 		
 		#Create the dropdown menu itself
 		dropdown_menu = OptionMenu(self.frame_options, data_var, *choices)
-		dropdown_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
+		dropdown_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=EW)
 		
 		#Link the tropdown menu to a method
 		data_var.trace('w', method)
@@ -273,36 +349,6 @@ class coffeegrindsize_GUI:
 		
 		#Return internal variable to caller
 		return data_var
-		
-		# #Link the histogram selection to an internal variable
-		# self.histogram_type.trace('w', self.change_dropdown_histogram_type)
-		
-		# self.options_row += 1
-		
-		##All options related to plotting histograms
-		#choices = { 'NumDiam', 'NumSurf'}
-		#self.label_title("Histogram Options:", choices)
-		
-		## === This block of lines creates a drop-down menu === (will eventually be a method)
-		#self.histogram_type = StringVar(self.master)
-		
-		# #List the possible types of hisograms that can be plotted
-		# #default_choice = 'Number Fraction vs Particle Diameter'
-		# #choices = { 'Number Fraction vs Particle Diameter','Extracted Fraction vs Particle Surface','Surface Fraction vs Particle Surface'}
-		# default_choice = 'NumDiam'
-		# choices = { 'NumDiam', 'NumSurf'}
-		# self.histogram_type.set(default_choice) # set the default option
-		
-		# #Display the histogram type menu
-		# histogram_type_label = Label(self.frame_options, text="Histogram Type:")
-		# histogram_type_menu = OptionMenu(self.frame_options, self.histogram_type, *choices)
-		# histogram_type_label.grid(row=self.options_row,sticky=E)
-		# histogram_type_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
-		
-		# #Link the histogram selection to an internal variable
-		# self.histogram_type.trace('w', self.change_dropdown_histogram_type)
-		
-		# self.options_row += 1
 	
 	#Method to display a label in the options frame
 	def label_entry(self, default_var, text, units_text, columnspan=None, width=None):
@@ -349,14 +395,25 @@ class coffeegrindsize_GUI:
 	
 	#Method to redraw the image after a zoom
 	def redraw(self, x=0, y=0):
-	        
-	        if self.image_id:
-	            self.image_canvas.delete(self.image_id)
-	        iw, ih = self.img.size
-	        size = int(iw * self.scale), int(ih * self.scale)
-	        self.image_obj = ImageTk.PhotoImage(self.img.resize(size))
-	        self.image_id = self.image_canvas.create_image(x, y, image=self.image_obj)
-	        
+			
+			#Delete currently drawn image if there is one
+			if self.image_id:
+				self.image_canvas.delete(self.image_id)
+			
+			#Select the appropriate image to be displayed
+			if self.display_type.get() == original_image_display_name:
+				self.img = self.img_source
+			if self.display_type.get() == threshold_image_display_name:
+				self.img = self.img_threshold
+			
+			#Determine the size of the image to be drawn and scale it appropriately
+			iw, ih = self.img.size
+			size = int(iw * self.scale), int(ih * self.scale)
+
+			#Load and display the updated image
+			self.image_obj = ImageTk.PhotoImage(self.img.resize(size))
+			self.image_id = self.image_canvas.create_image(x, y, image=self.image_obj)
+
 	#Method to set the starting point of a drag
 	def move_start(self, event):
 		self.image_canvas.scan_mark(event.x, event.y)
@@ -367,7 +424,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to track the mouse position
 	def motion(self, event):
-	    self.mouse_x, self.mouse_y = event.x, event.y
+		self.mouse_x, self.mouse_y = event.x, event.y
 
 	#Method to apply a zoom in
 	def zoom_in(self, event):
@@ -476,6 +533,7 @@ class coffeegrindsize_GUI:
 			self.img_source = Image.open(image_filename)
 			
 			#Set it to the current plotting object
+			self.display_type.set(original_image_display_name)
 			self.img = self.img_source
 			
 			#Determine smallest zoom such that the full image fits in the canvas
@@ -510,6 +568,18 @@ class coffeegrindsize_GUI:
 	#Method to apply image threshold
 	def threshold_image(self):
 		
+		#Verify that an image was loaded
+		if self.img_source == None:
+				
+				#Update the user interface status
+				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
 		#Interpret the image into a matrix of numbers
 		imdata_3d = np.array(self.img_source)
 		
@@ -531,10 +601,11 @@ class coffeegrindsize_GUI:
 		threshold_im_display[:,:,2][self.mask_threshold] = 0
 		
 		#Transform the display array into a PIL image
-		self.threshold_img = Image.fromarray(threshold_im_display)
+		self.img_threshold = Image.fromarray(threshold_im_display)
 		
 		#Set the thresholded image as the currently plotted object
-		self.img = self.threshold_img
+		self.display_type.set(threshold_image_display_name)
+		self.img = self.img_threshold
 		
 		#Refresh the image that is displayed
 		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
@@ -694,8 +765,8 @@ coffeegrindsize_GUI(root)
 
 #Refresh user interface in a try statement to avoid UTF-8 crashes when the user interface tries to interpret unrecognized inputs like an Apple trackpad
 while True:
-    try:
-        root.mainloop()
-        break
-    except UnicodeDecodeError:
-        pass
+	try:
+		root.mainloop()
+		break
+	except UnicodeDecodeError:
+		pass
