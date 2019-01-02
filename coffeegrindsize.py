@@ -1,4 +1,4 @@
-#Import the necessary packages
+#Import the required packages
 from tkinter import filedialog
 from tkinter import *
 from PIL import ImageTk, Image
@@ -214,7 +214,11 @@ class coffeegrindsize_GUI:
 		#Button to output data to the disk
 		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd,highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
-
+		
+		#Help button
+		help_button = Button(toolbar, text="Help", command=self.launch_help,highlightbackground=toolbar_bg)
+		help_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
 		# === Create a menu bar (File, Edit...) ===
 		menu = Menu(root)
 		root.config(menu=menu)
@@ -410,7 +414,7 @@ class coffeegrindsize_GUI:
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
-		image_filename = "/Users/gagne/Documents/IDL/IDL_resources/Kinu3.4_1_sub_detection_final.png"
+		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Kinu_Victor/Kinu3.4_1_sub.png"
 		
 		#Do not delete
 		#Invoke a file dialog to select image
@@ -458,6 +462,86 @@ class coffeegrindsize_GUI:
 			time.sleep(1)
 			self.status_var.set("Iteration #"+str(i))
 			self.master.update()
+	
+	#Method to display help
+	def launch_help(self):
+		
+		#Define some padding parameters
+		xpad = 20
+		ypad = 1
+		current_row = 0
+		
+		#Create a popup help window
+		help_window = Toplevel()
+		
+		#Create a frame for the text
+		help_frame = Frame(help_window, width=400, height=300)
+		help_frame.pack()
+		
+		#Prevent the frame to shrink when labels are placed in it
+		#help_frame.grid_propagate(False)
+		
+		#Set the window title
+		help_window.title = "Help"# - Coffee Particle Size Distribution by Jonathan Gagne"
+		
+		#Set a vertical space
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		#Display title
+		title_label = Label(help_frame, text="Help - Coffee Particle Size Distribution", font='Helvetica 18 bold', padx=xpad, pady=ypad)
+		title_label.grid(row=current_row)
+		current_row += 1
+		
+		#Display text
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		t1_label = Label(help_frame,text="This program is intended to measure the size distribution of coffee grounds from a picture \ntaken on a white background.", padx=xpad, pady=ypad, justify=LEFT)
+		t1_label.grid(column=0,row=current_row, sticky=W)
+		current_row += 1
+		
+		#Display subtitle
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		subtitle_label = Label(help_frame, text="Image Thresholding", font='Helvetica 16 bold', padx=xpad, pady=ypad)
+		subtitle_label.grid(row=current_row, sticky=W)
+		current_row += 1
+		
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		#Display more text
+		t2_label = Label(help_frame,text="The first step after loading an image is to threshold it. The program will use the blue channel \nof the color image because coffee grinds tend to be brown, which is very faint in the blue \nchannel, therefore increasing contrast with the white background. A reference for the white \nbackground will be determined from the median value of the image, and all pixels darker than \nthe threshold fraction of the white background will be grouped as potential coffee grounds.", padx=xpad, pady=ypad, justify=LEFT)
+		t2_label.grid(column=0,row=current_row, sticky=W)
+		current_row += 1
+		
+		#Display subtitle
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		subtitle_label = Label(help_frame, text="Particle Detection", font='Helvetica 16 bold', padx=xpad, pady=ypad)
+		subtitle_label.grid(row=current_row, sticky=W)
+		current_row += 1
+		
+		separator_label = Label(help_frame, text="")
+		separator_label.grid(row=current_row)
+		current_row += 1
+		
+		#Display more text
+		t2_label = Label(help_frame,text="The program will first order all thresholded pixels from the darkest to the brightest, and will \nstart working with the darkest ones first because they are more likely to be near the core of \na coffee particle. It will then start from one pixel and use it as the seed of a cluster. Any \nimmediately adjacent pixel that is also thresholded will be included in the cluster, and the \nones adjacent to them will also be included until no thresholded pixels touch the current \ncluster. Once a cluster is completed, various steps will be taken to determine whether it is \nvalid [MORE].", padx=xpad, pady=ypad, justify=LEFT)
+		t2_label.grid(column=0,row=current_row, sticky=W)
+		current_row += 1
+		
+		#Quit button
+		quit_button = Button(help_frame, text="Quit", padx=20, pady=20, command=lambda : help_window.destroy())
+		quit_button.grid(row=current_row, column=0)
 	
 	#Method to launch particle detection analysis
 	def launch_psd(self):
