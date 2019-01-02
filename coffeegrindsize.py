@@ -216,6 +216,10 @@ class coffeegrindsize_GUI:
 		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd,highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
+		#Quit button
+		quit_button = Button(toolbar, text="Quit", command=self.quit,highlightbackground=toolbar_bg)
+		quit_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
 		#Help button
 		help_button = Button(toolbar, text="Help", command=self.launch_help,highlightbackground=toolbar_bg)
 		help_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
@@ -467,16 +471,16 @@ class coffeegrindsize_GUI:
 		imdata_3d = np.array(self.img_source)
 		
 		#Only look at the blue channel of the image
-		imdata = imdata_3d[:,:,2]
+		self.imdata = imdata_3d[:,:,2]
 		
 		#Determine a value for the white background from the median
-		background_median = np.median(imdata)
+		self.background_median = np.median(self.imdata)
 		
 		#Create a mask for thresholded pixels
-		self.mask_threshold = np.where(imdata < background_median*np.float(self.threshold_var.get())/100)
+		self.mask_threshold = np.where(self.imdata < self.background_median*np.float(self.threshold_var.get())/100)
 		
 		#Create a thresholded image for display
-		threshold_im_display = imdata_3d
+		threshold_im_display = np.copy(imdata_3d)
 		
 		#Make the thresholded pixels red
 		threshold_im_display[:,:,0][self.mask_threshold] = 255
@@ -493,7 +497,7 @@ class coffeegrindsize_GUI:
 		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
 		
 		#Determine fraction of thresholded pixels
-		thresholded_fraction = len(self.mask_threshold[0])/np.prod(imdata.shape)*100
+		thresholded_fraction = self.mask_threshold[0].size/self.imdata.size*100
 		thresholded_fraction_str = "{0:.{1}f}".format(thresholded_fraction, 1)
 		
 		#Refresh the user interface status
@@ -501,14 +505,58 @@ class coffeegrindsize_GUI:
 		
 		#Refresh the state of the user interface window
 		self.master.update()
+	
+	#Method to launch particle detection analysis
+	def launch_psd(self):
 		
-		#stop()
+		#Sort the thresholded pixel indices by increasing brightness in the blue channel
+		sort_indices = np.argsort(self.imdata[self.mask_threshold])
+		self.mask_threshold = (self.mask_threshold[0][sort_indices], self.mask_threshold[1][sort_indices])
+		
+		#Create an image of the X and Y positions
+		#Not needed
+		#imx = np.tile(np.arange(self.imdata.shape[1]),(self.imdata.shape[0],1))
+		#imy = np.tile(np.arange(self.imdata.shape[0]),(self.imdata.shape[1],1)).transpose()
+		
+		#Catalog image positions and brightness
+		#gmaskall_X = self.mask_threshold[0]
+		#gmaskall_Y = self.mask_threshold[1]
+		#gmaskall_Z = self.imdata[self.mask_threshold]
+		
+		#Start the creation of clusters
+		counted = np.zeros(self.mask_threshold[0].size, dtype=bool)
+		for i in range(self.mask_threshold[0].size):
+			#Update status
+			if i%3 == 0:
+				frac_counted = np.sum(counted)/self.mask_threshold[0].size*100
+				frac_counted = np.minimum(frac_counted,99.9)
+				frac_counted_str = "{0:.{1}f}".format(frac_counted, 1)
+				self.status_var.set("Iteration #"+str(i)+"; Fraction of thresholded pixels that were analyzed: "+frac_counted_str+' %')
+				self.master.update()
+			time.sleep(0.1)
+		
+		stop()
+		
+		#self.imdata
+		#self.mask_threshold
 		
 		#Testing a live update of the user interface status
 		#for i in range(12):
 		#	time.sleep(1)
 		#	self.status_var.set("Iteration #"+str(i))
 		#	self.master.update()
+	
+	#Method to create histogram
+	def create_histogram(self):
+		print("Not coded yet")
+	
+	#Method to save data to disk
+	def save_data(self):
+		print("Not coded yet")
+	
+	#Method to quit user interface
+	def quit(self):
+		root.destroy()
 	
 	#Method to display help
 	def launch_help(self):
@@ -589,23 +637,6 @@ class coffeegrindsize_GUI:
 		#Quit button
 		quit_button = Button(help_frame, text="Quit", padx=20, pady=20, command=lambda : help_window.destroy())
 		quit_button.grid(row=current_row, column=0)
-	
-	#Method to launch particle detection analysis
-	def launch_psd(self):
-		print("Not coded yet")
-	
-	#Method to create histogram
-	def create_histogram(self):
-		print("Not coded yet")
-	
-	#Method to save data to disk
-	def save_data(self):
-		print("Not coded yet")
-	
-	#Method to quit user interface
-	def quit(self):
-		print("Not coded yet")
-		pdb.set_trace()
 
 # === Main loop and call to the user interface window ===
 
