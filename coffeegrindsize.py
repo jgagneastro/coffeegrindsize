@@ -3,6 +3,7 @@ from tkinter import filedialog
 from tkinter import *
 from PIL import ImageTk, Image
 import time
+import numpy as np
 
 #Temporary for debugging purposes
 import pdb
@@ -424,8 +425,11 @@ class coffeegrindsize_GUI:
 		# Hitting cancel in the filedialog will therefore skip the following steps
 		if image_filename != "":
 			
-			#Open image
-			self.img = Image.open(image_filename)
+			#Open image and remember it as the source image
+			self.img_source = Image.open(image_filename)
+			
+			#Set it to the current plotting object
+			self.img = self.img_source
 			
 			#Determine smallest zoom such that the full image fits in the canvas
 			width_factor = self.canvas_width/self.img.size[0]
@@ -445,7 +449,10 @@ class coffeegrindsize_GUI:
 			self.noimage_label.pack_forget()
 			
 			#Refresh the image
-			self.redraw(x=self.canvas_width/2+3, y=self.canvas_height/2+3)
+			self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+			
+			#Reset zoom to center the image properly
+			self.reset_zoom()
 			
 			#Refresh the user interface status
 			self.status_var.set("Image opened: "+image_filename)
@@ -455,13 +462,53 @@ class coffeegrindsize_GUI:
 	
 	#Method to apply image threshold
 	def threshold_image(self):
-		print("Not coded yet")
+		
+		#Interpret the image into a matrix of numbers
+		imdata_3d = np.array(self.img_source)
+		
+		#Only look at the blue channel of the image
+		imdata = imdata_3d[:,:,2]
+		
+		#Determine a value for the white background from the median
+		background_median = np.median(imdata)
+		
+		#Create a mask for thresholded pixels
+		self.mask_threshold = np.where(imdata < background_median*np.float(self.threshold_var.get())/100)
+		
+		#Create a thresholded image for display
+		threshold_im_display = imdata_3d
+		
+		#Make the thresholded pixels red
+		threshold_im_display[:,:,0][self.mask_threshold] = 255
+		threshold_im_display[:,:,1][self.mask_threshold] = 0
+		threshold_im_display[:,:,2][self.mask_threshold] = 0
+		
+		#Transform the display array into a PIL image
+		self.threshold_img = Image.fromarray(threshold_im_display)
+		
+		#Set the thresholded image as the currently plotted object
+		self.img = self.threshold_img
+		
+		#Refresh the image that is displayed
+		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+		
+		#Determine fraction of thresholded pixels
+		thresholded_fraction = len(self.mask_threshold[0])/np.prod(imdata.shape)*100
+		thresholded_fraction_str = "{0:.{1}f}".format(thresholded_fraction, 1)
+		
+		#Refresh the user interface status
+		self.status_var.set("Image thresholded: "+thresholded_fraction_str+"% of all pixels were thresholded")
+		
+		#Refresh the state of the user interface window
+		self.master.update()
+		
+		#stop()
 		
 		#Testing a live update of the user interface status
-		for i in range(12):
-			time.sleep(1)
-			self.status_var.set("Iteration #"+str(i))
-			self.master.update()
+		#for i in range(12):
+		#	time.sleep(1)
+		#	self.status_var.set("Iteration #"+str(i))
+		#	self.master.update()
 	
 	#Method to display help
 	def launch_help(self):
