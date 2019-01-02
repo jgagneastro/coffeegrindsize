@@ -122,29 +122,8 @@ class coffeegrindsize_GUI:
 
 		self.label_separator()
 		
-		#All options related to plotting histograms
-		self.label_title("Histogram Options:")
-		
-		# === This block of lines creates a drop-down menu === (will eventually be a method)
-		self.histogram_type = StringVar(self.master)
-		
-		#List the possible types of hisograms that can be plotted
-		#default_choice = 'Number Fraction vs Particle Diameter'
-		#choices = { 'Number Fraction vs Particle Diameter','Extracted Fraction vs Particle Surface','Surface Fraction vs Particle Surface'}
-		default_choice = 'NumDiam'
-		choices = { 'NumDiam', 'NumSurf'}
-		self.histogram_type.set(default_choice) # set the default option
-		
-		#Display the histogram type menu
-		histogram_type_label = Label(self.frame_options, text="Histogram Type:")
-		histogram_type_menu = OptionMenu(self.frame_options, self.histogram_type, *choices)
-		histogram_type_label.grid(row=self.options_row,sticky=E)
-		histogram_type_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
-		
-		#Link the histogram selection to an internal variable
-		self.histogram_type.trace('w', self.change_dropdown_histogram_type)
-		
-		self.options_row += 1
+		choices = ['NumDiam', 'NumSurf']
+		self.histogram_type = self.dropdown_entry("Histogram Options:", choices, self.change_dropdown_histogram_type)
 		
 		#X axis range for the histogram figure
 		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
@@ -166,6 +145,15 @@ class coffeegrindsize_GUI:
 		
 		#The base of the output file names
 		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
+		
+		self.label_separator()
+		
+		#All options related to image display
+		self.label_title("Display Options:")
+		
+		#Select the figure type
+		#The base of the output file names
+		#self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
 		
 		#Add a few horizontal spaces
 		for i in range(12):
@@ -260,6 +248,61 @@ class coffeegrindsize_GUI:
 	def change_dropdown_histogram_type(self, *args):
 		#This is not coded yet
 		print(self.histogram_type.get())
+	
+	def dropdown_entry(self, label, choices, method, default_choice_index=0):
+		
+		#Create a variable that will be bound to the dropdown menu
+		data_var = StringVar()
+		
+		#First option is the initial choice by default
+		data_var.set(choices[default_choice_index])
+		
+		#Create a label for the dropdown menu
+		dropdown_label = Label(self.frame_options, text=label)
+		dropdown_label.grid(row=self.options_row,sticky=E)
+		
+		#Create the dropdown menu itself
+		dropdown_menu = OptionMenu(self.frame_options, data_var, *choices)
+		dropdown_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
+		
+		#Link the tropdown menu to a method
+		data_var.trace('w', method)
+		
+		#Update the display row
+		self.options_row += 1
+		
+		#Return internal variable to caller
+		return data_var
+		
+		# #Link the histogram selection to an internal variable
+		# self.histogram_type.trace('w', self.change_dropdown_histogram_type)
+		
+		# self.options_row += 1
+		
+		##All options related to plotting histograms
+		#choices = { 'NumDiam', 'NumSurf'}
+		#self.label_title("Histogram Options:", choices)
+		
+		## === This block of lines creates a drop-down menu === (will eventually be a method)
+		#self.histogram_type = StringVar(self.master)
+		
+		# #List the possible types of hisograms that can be plotted
+		# #default_choice = 'Number Fraction vs Particle Diameter'
+		# #choices = { 'Number Fraction vs Particle Diameter','Extracted Fraction vs Particle Surface','Surface Fraction vs Particle Surface'}
+		# default_choice = 'NumDiam'
+		# choices = { 'NumDiam', 'NumSurf'}
+		# self.histogram_type.set(default_choice) # set the default option
+		
+		# #Display the histogram type menu
+		# histogram_type_label = Label(self.frame_options, text="Histogram Type:")
+		# histogram_type_menu = OptionMenu(self.frame_options, self.histogram_type, *choices)
+		# histogram_type_label.grid(row=self.options_row,sticky=E)
+		# histogram_type_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=W)
+		
+		# #Link the histogram selection to an internal variable
+		# self.histogram_type.trace('w', self.change_dropdown_histogram_type)
+		
+		# self.options_row += 1
 	
 	#Method to display a label in the options frame
 	def label_entry(self, default_var, text, units_text, columnspan=None, width=None):
@@ -526,13 +569,16 @@ class coffeegrindsize_GUI:
 		#Start the creation of clusters
 		counted = np.zeros(self.mask_threshold[0].size, dtype=bool)
 		for i in range(self.mask_threshold[0].size):
-			#Update status
-			if i%3 == 0:
+			
+			#Update status only on some steps
+			if i%10 == 0:
 				frac_counted = np.sum(counted)/self.mask_threshold[0].size*100
 				frac_counted = np.minimum(frac_counted,99.9)
 				frac_counted_str = "{0:.{1}f}".format(frac_counted, 1)
 				self.status_var.set("Iteration #"+str(i)+"; Fraction of thresholded pixels that were analyzed: "+frac_counted_str+' %')
 				self.master.update()
+			
+			#Placeholder
 			time.sleep(0.1)
 		
 		stop()
