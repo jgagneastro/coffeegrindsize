@@ -44,7 +44,7 @@ histogram_image_display_name = "Histograms"
 class coffeegrindsize_GUI:
 	
 	#Actions to be taken on initialization of user interface window
-	def __init__(self,root):
+	def __init__(self, root):
 		
 		# === Set some object variables that will not be garbage collected ===
 		
@@ -145,8 +145,8 @@ class coffeegrindsize_GUI:
 		#This is a checkbox
 		xlog_var = IntVar()
 		xlog_var.set(1)
-		checkbox1 = Checkbutton(self.frame_options, text="Logarithmic X axis",variable=xlog_var)
-		checkbox1.grid(row=self.options_row,columnspan=2,sticky=E)
+		checkbox1 = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=xlog_var)
+		checkbox1.grid(row=self.options_row, columnspan=2, sticky=E)
 		
 		self.options_row += 1
 		
@@ -178,7 +178,7 @@ class coffeegrindsize_GUI:
 		
 		#Button for resetting all options to default
 		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
-		reset_params_button.grid(row=self.options_row,column=0)
+		reset_params_button.grid(row=self.options_row, column=0)
 		self.options_row += 1
 
 		# === Create a canvas to display images and figures ===
@@ -186,7 +186,7 @@ class coffeegrindsize_GUI:
 		#Initialize the canvas
 		image_canvas_bg = "gray40"
 		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
-		self.image_canvas.grid(row=0,column=3,rowspan=145)
+		self.image_canvas.grid(row=0, column=3, rowspan=145)
 		
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
@@ -198,11 +198,11 @@ class coffeegrindsize_GUI:
 		# === Populate the toolbar with buttons for analysis ===
 		
 		#Button to open an image of the coffee grounds picture
-		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image,highlightbackground=toolbar_bg)
+		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image, highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to apply image threshold
-		threshold_image_button = Button(toolbar, text="Threshold Image...", command=self.threshold_image,highlightbackground=toolbar_bg)
+		threshold_image_button = Button(toolbar, text="Threshold Image...", command=self.threshold_image, highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to launch the particle detection analysis
@@ -210,19 +210,19 @@ class coffeegrindsize_GUI:
 		psd_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to display histogram figures
-		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=self.create_histogram,highlightbackground=toolbar_bg)
+		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=self.create_histogram, highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to output data to the disk
-		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd,highlightbackground=toolbar_bg)
+		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd, highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
-		quit_button = Button(toolbar, text="Quit", command=self.quit,highlightbackground=toolbar_bg)
+		quit_button = Button(toolbar, text="Quit", command=self.quit, highlightbackground=toolbar_bg)
 		quit_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Help button
-		help_button = Button(toolbar, text="Help", command=self.launch_help,highlightbackground=toolbar_bg)
+		help_button = Button(toolbar, text="Help", command=self.launch_help, highlightbackground=toolbar_bg)
 		help_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		# === Create a menu bar (File, Edit...) ===
@@ -335,11 +335,11 @@ class coffeegrindsize_GUI:
 		
 		#Create a label for the dropdown menu
 		dropdown_label = Label(self.frame_options, text=label)
-		dropdown_label.grid(row=self.options_row,sticky=E)
+		dropdown_label.grid(row=self.options_row, sticky=E)
 		
 		#Create the dropdown menu itself
 		dropdown_menu = OptionMenu(self.frame_options, data_var, *choices)
-		dropdown_menu.grid(row=self.options_row,column=1,columnspan=2,sticky=EW)
+		dropdown_menu.grid(row=self.options_row, column=1, columnspan=2, sticky=EW)
 		
 		#Link the tropdown menu to a method
 		data_var.trace('w', method)
@@ -365,15 +365,15 @@ class coffeegrindsize_GUI:
 		
 		#Display the label for the name of the option
 		data_label = Label(self.frame_options, text=text)
-		data_label.grid(row=self.options_row,sticky=E)
+		data_label.grid(row=self.options_row, sticky=E)
 		
 		#Display the data entry box
 		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
-		data_entry.grid(row=self.options_row,column=1,columnspan=columnspan)
+		data_entry.grid(row=self.options_row, column=1, columnspan=columnspan)
 		
 		#Display the physical units of this option
 		data_label_units = Label(self.frame_options, text=units_text)
-		data_label_units.grid(row=self.options_row,column=2,sticky=W)
+		data_label_units.grid(row=self.options_row, column=2, sticky=W)
 		
 		#Update the row where next labels and entries will be displayed
 		self.options_row += 1
@@ -408,7 +408,7 @@ class coffeegrindsize_GUI:
 			
 			#Determine the size of the image to be drawn and scale it appropriately
 			iw, ih = self.img.size
-			size = int(iw * self.scale), int(ih * self.scale)
+			size = int(iw*self.scale), int(ih*self.scale)
 
 			#Load and display the updated image
 			self.image_obj = ImageTk.PhotoImage(self.img.resize(size))
@@ -452,8 +452,8 @@ class coffeegrindsize_GUI:
 		orig_nx, orig_ny = self.img.size
 		
 		#Determine cursor position on original image coordinates (x,y -> alpha, beta)
-		mouse_alpha = orig_nx/2 + (self.mouse_x-image_x)/self.scale
-		mouse_beta = orig_ny/2 + (self.mouse_y-image_y)/self.scale
+		mouse_alpha = orig_nx/2 + (self.mouse_x - image_x)/self.scale
+		mouse_beta = orig_ny/2 + (self.mouse_y - image_y)/self.scale
 		
 		#Change the scale of image according to directionality
 		if directionality > 0:
@@ -539,7 +539,7 @@ class coffeegrindsize_GUI:
 			#Determine smallest zoom such that the full image fits in the canvas
 			width_factor = self.canvas_width/self.img.size[0]
 			height_factor = self.canvas_height/self.img.size[1]
-			scale_factor = min(width_factor,height_factor)
+			scale_factor = min(width_factor, height_factor)
 			nx = round(scale_factor*self.img.size[0])
 			ny = round(scale_factor*self.img.size[1])
 				
@@ -584,7 +584,7 @@ class coffeegrindsize_GUI:
 		imdata_3d = np.array(self.img_source)
 		
 		#Only look at the blue channel of the image
-		self.imdata = imdata_3d[:,:,2]
+		self.imdata = imdata_3d[:, :, 2]
 		
 		#Determine a value for the white background from the median
 		self.background_median = np.median(self.imdata)
@@ -596,9 +596,9 @@ class coffeegrindsize_GUI:
 		threshold_im_display = np.copy(imdata_3d)
 		
 		#Make the thresholded pixels red
-		threshold_im_display[:,:,0][self.mask_threshold] = 255
-		threshold_im_display[:,:,1][self.mask_threshold] = 0
-		threshold_im_display[:,:,2][self.mask_threshold] = 0
+		threshold_im_display[:, :, 0][self.mask_threshold] = 255
+		threshold_im_display[:, :, 1][self.mask_threshold] = 0
+		threshold_im_display[:, :, 2][self.mask_threshold] = 0
 		
 		#Transform the display array into a PIL image
 		self.img_threshold = Image.fromarray(threshold_im_display)
@@ -712,7 +712,7 @@ class coffeegrindsize_GUI:
 		current_row += 1
 		
 		t1_label = Label(help_frame,text="This program is intended to measure the size distribution of coffee grounds from a picture \ntaken on a white background.", padx=xpad, pady=ypad, justify=LEFT)
-		t1_label.grid(column=0,row=current_row, sticky=W)
+		t1_label.grid(column=0, row=current_row, sticky=W)
 		current_row += 1
 		
 		#Display subtitle
@@ -729,8 +729,8 @@ class coffeegrindsize_GUI:
 		current_row += 1
 		
 		#Display more text
-		t2_label = Label(help_frame,text="The first step after loading an image is to threshold it. The program will use the blue channel \nof the color image because coffee grinds tend to be brown, which is very faint in the blue \nchannel, therefore increasing contrast with the white background. A reference for the white \nbackground will be determined from the median value of the image, and all pixels darker than \nthe threshold fraction of the white background will be grouped as potential coffee grounds.", padx=xpad, pady=ypad, justify=LEFT)
-		t2_label.grid(column=0,row=current_row, sticky=W)
+		t2_label = Label(help_frame, text="The first step after loading an image is to threshold it. The program will use the blue channel \nof the color image because coffee grinds tend to be brown, which is very faint in the blue \nchannel, therefore increasing contrast with the white background. A reference for the white \nbackground will be determined from the median value of the image, and all pixels darker than \nthe threshold fraction of the white background will be grouped as potential coffee grounds.", padx=xpad, pady=ypad, justify=LEFT)
+		t2_label.grid(column=0, row=current_row, sticky=W)
 		current_row += 1
 		
 		#Display subtitle
@@ -747,8 +747,8 @@ class coffeegrindsize_GUI:
 		current_row += 1
 		
 		#Display more text
-		t2_label = Label(help_frame,text="The program will first order all thresholded pixels from the darkest to the brightest, and will \nstart working with the darkest ones first because they are more likely to be near the core of \na coffee particle. It will then start from one pixel and use it as the seed of a cluster. Any \nimmediately adjacent pixel that is also thresholded will be included in the cluster, and the \nones adjacent to them will also be included until no thresholded pixels touch the current \ncluster. Once a cluster is completed, various steps will be taken to determine whether it is \nvalid [MORE].", padx=xpad, pady=ypad, justify=LEFT)
-		t2_label.grid(column=0,row=current_row, sticky=W)
+		t2_label = Label(help_frame, text="The program will first order all thresholded pixels from the darkest to the brightest, and will \nstart working with the darkest ones first because they are more likely to be near the core of \na coffee particle. It will then start from one pixel and use it as the seed of a cluster. Any \nimmediately adjacent pixel that is also thresholded will be included in the cluster, and the \nones adjacent to them will also be included until no thresholded pixels touch the current \ncluster. Once a cluster is completed, various steps will be taken to determine whether it is \nvalid [MORE].", padx=xpad, pady=ypad, justify=LEFT)
+		t2_label.grid(column=0, row=current_row, sticky=W)
 		current_row += 1
 		
 		#Quit button
