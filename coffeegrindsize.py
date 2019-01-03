@@ -84,6 +84,10 @@ class coffeegrindsize_GUI:
 		self.canvas_width = 1000
 		self.canvas_height = 800
 		
+		#Set the last image position memory to its default center
+		self.last_image_x = self.canvas_width/2
+		self.last_image_y = self.canvas_height/2
+		
 		#Set the window title
 		self.master.title("Coffee Particle Size Distribution by Jonathan Gagne")
 		
@@ -317,7 +321,7 @@ class coffeegrindsize_GUI:
 				return
 		
 		#Redraw the selected image
-		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
 		#Update the user interface status
 		self.status_var.set("Changed Display to "+self.display_type.get()+"...")
@@ -469,6 +473,10 @@ class coffeegrindsize_GUI:
 		new_image_x += self.image_canvas.canvasx(0)
 		new_image_y += self.image_canvas.canvasy(0)
 		
+		#Remember the last image position
+		self.last_image_x = new_image_x
+		self.last_image_y = new_image_y
+		
 		#Redraw image at the desired position
 		self.redraw(x=new_image_x, y=new_image_y)
 	
@@ -608,7 +616,7 @@ class coffeegrindsize_GUI:
 		self.img = self.img_threshold
 		
 		#Refresh the image that is displayed
-		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
 		#Determine fraction of thresholded pixels
 		thresholded_fraction = self.mask_threshold[0].size/self.imdata.size*100
