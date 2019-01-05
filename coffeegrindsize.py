@@ -810,6 +810,10 @@ class coffeegrindsize_GUI:
 		#Redraw the image
 		self.redraw(x=self.canvas_width/2, y=self.canvas_height/2)
 		
+		#Remember this new position
+		self.last_image_x = self.canvas_width/2
+		self.last_image_y = self.canvas_height/2
+		
 		#Update the user interface
 		self.master.update()
 	
