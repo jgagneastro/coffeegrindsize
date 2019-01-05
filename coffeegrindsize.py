@@ -42,7 +42,7 @@ outlines_image_display_name = "Cluster Outlines"
 histogram_image_display_name = "Histograms"
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "US Quarter":22}
+reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "Canadian Quarter":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
 
 #Python class for the user interface window
 class coffeegrindsize_GUI:
