@@ -42,7 +42,7 @@ outlines_image_display_name = "Cluster Outlines"
 histogram_image_display_name = "Histograms"
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "Canadian Quarter":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
+reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
 
 #Python class for the user interface window
 class coffeegrindsize_GUI:
@@ -55,6 +55,9 @@ class coffeegrindsize_GUI:
 		#This variable will contain the object of the image currently displayed
 		self.image_id = None
 		
+		#Keep track of the mouse click mode
+		self.mouse_click_mode = None
+		
 		#These variables will contain various PIL images
 		self.img = None
 		self.img_source = None
@@ -62,10 +65,15 @@ class coffeegrindsize_GUI:
 		self.img_clusters = None
 		self.img_histogram = None
 		
-		#This variable contains the starting point of line for drawing
+		#These variables contain the starting point of line for drawing
 		self.linex_start = None
 		self.liney_start = None
 		self.line_obj = None
+		
+		#These variables contain the polygon for analysis region
+		self.polygon_alpha = None
+		self.polygon_beta = None
+		self.selreg_current_line = None
 		
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
@@ -234,6 +242,10 @@ class coffeegrindsize_GUI:
 		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image, highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
+		#Button to select region containing the coffee grounds
+		region_button = Button(toolbar, text="Select Analysis Region", command=self.select_region, highlightbackground=toolbar_bg)
+		region_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
 		#Button to apply image threshold
 		threshold_image_button = Button(toolbar, text="Threshold Image...", command=self.threshold_image, highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
@@ -282,17 +294,100 @@ class coffeegrindsize_GUI:
 		#Always keep track of the mouse position (this is used for zooming toward the cursor)
 		self.image_canvas.bind('<Motion>', self.motion)
 		
-		#Set up key bindins for dragging the image
+		#Set up key bindings for dragging the image
 		self.image_canvas.bind("<ButtonPress-1>", self.move_start)
 		self.image_canvas.bind("<B1-Motion>", self.move_move)
 		
-		#Set up key bindins for drawing a line
+		#Set up key bindings for drawing a line
 		self.image_canvas.bind("<ButtonPress-2>", self.line_start)
 		self.image_canvas.bind("<B2-Motion>", self.line_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
 		self.image_canvas.bind_all("i", self.zoom_in)
 		self.image_canvas.bind_all("o", self.zoom_out)
+		
+		#Set up key binding for data analysis selection quit
+		self.image_canvas.bind_all("q", self.quit_region_select)
+	
+	#Method to select analysis region
+	def select_region(self):
+		
+		#Do nothing if already in select region mode
+		if self.mouse_click_mode == "SELECT_REGION":
+			return
+		
+		#Verify that an image is loaded
+		if self.img_source == None:
+				
+				#Update the user interface status
+				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Delete all currently drawn lines
+		self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+		
+		#Reset the region if it exists
+		self.polygon_alpha = None
+		self.polygon_beta = None
+		
+		#Redraw the selected image
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
+		#Update the user interface status
+		self.status_var.set("Click on the image to draw a polygon enclosing the coffee grounds, then press q...")
+		
+		#Update the user interface
+		self.master.update()
+		
+		#Change mouse click mode
+		self.mouse_click_mode = "SELECT_REGION"
+	
+	#Method to finish analysis region selection
+	def quit_region_select(self, event):
+		
+		#Only active in SELECT_REGION mode
+		if self.mouse_click_mode == "SELECT_REGION":
+			
+			#Destroy current mobile line if it exists
+			if self.selreg_current_line is not None:
+				self.image_canvas.delete(self.selreg_current_line)
+				self.selreg_current_line = None
+			
+			#If there are too few polygon corners just quit
+			if self.polygon_alpha.size < 3:
+				
+				#Delete all currently drawn lines
+				self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+				
+				#Reset the polygon region
+				self.polygon_alpha = None
+				self.polygon_beta = None
+				
+				#Update the user interface status
+				self.status_var.set("Analysis Region Did Not Have Enough Corners (at least 3 are needed)...")
+				
+			else:
+				
+				#Add last polygon corner
+				self.polygon_alpha = np.append(self.polygon_alpha, self.polygon_alpha[0])
+				self.polygon_beta = np.append(self.polygon_beta, self.polygon_beta[0])
+				
+				#Update the user interface status
+				self.status_var.set("Analysis Region Was Set...")
+			
+			#Redraw image
+			self.redraw(x=self.last_image_x, y=self.last_image_y)
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Change mouse click mode
+			self.mouse_click_mode = None
 	
 	#Method to open blog web page
 	def blog_goto(self, *args):
@@ -477,6 +572,9 @@ class coffeegrindsize_GUI:
 	#Method to redraw the image after a zoom
 	def redraw(self, x=0, y=0):
 			
+			#Delete all currently drawn lines
+			self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+			
 			#Delete currently drawn image if there is one
 			if self.image_id:
 				self.image_canvas.delete(self.image_id)
@@ -494,14 +592,83 @@ class coffeegrindsize_GUI:
 			#Load and display the updated image
 			self.image_obj = ImageTk.PhotoImage(self.img.resize(size))
 			self.image_id = self.image_canvas.create_image(x, y, image=self.image_obj)
-
+			
+			#Draw data analysis lines if they are defined
+			if self.polygon_alpha is not None:
+				
+				#There must be at least two points to draw the lines
+				npoly = self.polygon_alpha.size
+				if npoly > 1:
+					
+					#Get current coordinates of image
+					image_x, image_y = self.image_canvas.coords(self.image_id)
+					
+					#Include effect of drag
+					image_x -= self.image_canvas.canvasx(0)
+					image_y -= self.image_canvas.canvasy(0)
+					
+					#Get original image size
+					orig_nx, orig_ny = self.img.size
+					
+					#Now draw the lines
+					for i in range(npoly-1):
+						
+						#Determine current X, Y positions of lines
+						line_x_start = (self.polygon_alpha[i] - orig_nx/2)*self.scale + image_x
+						line_y_start = (self.polygon_beta[i] - orig_ny/2)*self.scale + image_y
+						line_x_end = (self.polygon_alpha[i+1] - orig_nx/2)*self.scale + image_x
+						line_y_end = (self.polygon_beta[i+1] - orig_ny/2)*self.scale + image_y
+						
+						#Include effect of drag
+						line_x_start += self.image_canvas.canvasx(0)
+						line_y_start += self.image_canvas.canvasy(0)
+						line_x_end += self.image_canvas.canvasx(0)
+						line_y_end += self.image_canvas.canvasy(0)
+						
+						#Redraw line
+						line_obj = self.image_canvas.create_line(line_x_start, line_y_start, line_x_end, line_y_end, fill="green")
+						
+						#I will need to figure out how to delete those when they go outside of the image frame
+	
 	#Method to set the starting point of a drag
 	def move_start(self, event):
-		self.image_canvas.scan_mark(event.x, event.y)
+		
+		#In normal mode, set start of motion
+		if self.mouse_click_mode is None:
+			self.image_canvas.scan_mark(event.x, event.y)
+		
+		#In select region mode, add corners to polygon
+		if self.mouse_click_mode == "SELECT_REGION":
+			
+			# === Determine mouse position in original pixel units ===
+			#Get current coordinates of image
+			image_x, image_y = self.image_canvas.coords(self.image_id)
+			
+			#Include effect of drag
+			image_x -= self.image_canvas.canvasx(0)
+			image_y -= self.image_canvas.canvasy(0)
+		
+			#Get original image size
+			orig_nx, orig_ny = self.img.size
+		
+			#Determine cursor position on original image coordinates (x,y -> alpha, beta)
+			mouse_alpha = orig_nx/2 + (self.mouse_x - image_x)/self.scale
+			mouse_beta = orig_ny/2 + (self.mouse_y - image_y)/self.scale
+			
+			if self.polygon_alpha is None:
+				self.polygon_alpha = np.array([mouse_alpha])
+				self.polygon_beta = np.array([mouse_beta])
+			else:
+				self.polygon_alpha = np.append(self.polygon_alpha, mouse_alpha)
+				self.polygon_beta = np.append(self.polygon_beta, mouse_beta)
+			
+			#Redraw image
+			self.redraw(x=self.last_image_x, y=self.last_image_y)
 	
 	#Method to execute the move of a drag
 	def move_move(self, event):
-		self.image_canvas.scan_dragto(event.x, event.y, gain=1)
+		if self.mouse_click_mode is None:
+			self.image_canvas.scan_dragto(event.x, event.y, gain=1)
 	
 	#Method to set the starting point of a line
 	def line_start(self, event):
@@ -532,7 +699,45 @@ class coffeegrindsize_GUI:
 	
 	#Method to track the mouse position
 	def motion(self, event):
+		
+		#Update the current mouse position
 		self.mouse_x, self.mouse_y = event.x, event.y
+		
+		#In analysis selection region mode, show the next line
+		if self.mouse_click_mode == "SELECT_REGION":
+			
+			#Draw data analysis lines if they are defined
+			if self.polygon_alpha is not None:
+				
+				#Get current coordinates of image
+				image_x, image_y = self.image_canvas.coords(self.image_id)
+				
+				#Include effect of drag
+				image_x -= self.image_canvas.canvasx(0)
+				image_y -= self.image_canvas.canvasy(0)
+				
+				#Get original image size
+				orig_nx, orig_ny = self.img.size
+				
+				# === Now draw the line ===
+				#Determine current X, Y positions of the line
+				line_x_start = (self.polygon_alpha[-1] - orig_nx/2)*self.scale + image_x
+				line_y_start = (self.polygon_beta[-1] - orig_ny/2)*self.scale + image_y
+				line_x_end = self.mouse_x
+				line_y_end = self.mouse_y
+				
+				#Include effect of drag
+				line_x_start += self.image_canvas.canvasx(0)
+				line_y_start += self.image_canvas.canvasy(0)
+				line_x_end += self.image_canvas.canvasx(0)
+				line_y_end += self.image_canvas.canvasy(0)
+				
+				#Destroy line if it exists
+				if self.selreg_current_line is not None:
+					self.image_canvas.delete(self.selreg_current_line)
+				
+				#Redraw line
+				self.selreg_current_line = self.image_canvas.create_line(line_x_start, line_y_start, line_x_end, line_y_end, fill="green")
 
 	#Method to apply a zoom in
 	def zoom_in(self, event):
