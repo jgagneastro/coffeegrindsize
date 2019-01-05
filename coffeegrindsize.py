@@ -131,7 +131,7 @@ class coffeegrindsize_GUI:
 		self.pixel_length_id.config(state=DISABLED)
 		
 		#Provide a menu of reference objects
-		self.reference_object = self.dropdown_entry("Reference Objects:", list(reference_objects_dict.keys()), self.change_reference_object)
+		self.reference_object = self.dropdown_entry("Reference Object:", list(reference_objects_dict.keys()), self.change_reference_object)
 		
 		#Physical size of one pixel in the coffee grounds picture
 		#For now this needs to be input manually
