@@ -4,6 +4,7 @@ from tkinter import *
 from PIL import ImageTk, Image
 import time
 import numpy as np
+import webbrowser
 
 #Temporary for debugging purposes
 import pdb
@@ -184,7 +185,12 @@ class coffeegrindsize_GUI:
 		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row, column=0)
 		self.options_row += 1
-
+		
+		#Button to open blog
+		blog_button = Button(self.frame_options, text="Read Coffee Blog", command=self.blog_goto)
+		blog_button.grid(row=self.options_row, column=0)
+		self.options_row += 1
+		
 		# === Create a canvas to display images and figures ===
 		
 		#Initialize the canvas
@@ -247,7 +253,7 @@ class coffeegrindsize_GUI:
 		
 		#Add an option to quit
 		subMenu.add_command(label="Quit", command=quit)
-
+		
 		# === Create drag and zoom options for the image canvas ===
 		
 		#Always keep track of the mouse position (this is used for zooming toward the cursor)
@@ -260,6 +266,10 @@ class coffeegrindsize_GUI:
 		#Set up key bindings for zooming in and out with the i/o keys
 		self.image_canvas.bind_all("i", self.zoom_in)
 		self.image_canvas.bind_all("o", self.zoom_out)
+	
+	#Method to open blog web page
+	def blog_goto(self, *args):
+		webbrowser.open("https://jgagneastro.wordpress.com/2018/11/30/brewing-better-coffee/")  # Go to example.com
 	
 	#Method to register changes in the histogram type option
 	def change_histogram_type(self, *args):
