@@ -5,6 +5,7 @@ from PIL import ImageTk, Image
 import time
 import numpy as np
 import webbrowser
+from matplotlib import path
 
 #Temporary for debugging purposes
 import pdb
@@ -834,6 +835,13 @@ class coffeegrindsize_GUI:
 	#Method to open an image from the disk
 	def open_image(self):
 		
+		#Delete all currently drawn lines
+		self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+		
+		#Reset the region if it exists
+		self.polygon_alpha = None
+		self.polygon_beta = None
+		
 		#Update root to avoid problems with file dialog
 		self.master.update()
 		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
@@ -908,6 +916,35 @@ class coffeegrindsize_GUI:
 		
 		#Create a mask for thresholded pixels
 		self.mask_threshold = np.where(self.imdata < self.background_median*np.float(self.threshold_var.get())/100)
+		
+		#If an analysis polygon is set, select only pixels inside the polygon
+		if self.polygon_alpha is not None:
+			
+			#Build a polygon from the data stored as internal variables
+			coord_list = [(self.polygon_alpha[0], self.polygon_beta[0])]
+			npoly = self.polygon_alpha.size
+			for i in range(npoly-1):
+				coord_list.append((self.polygon_alpha[i+1], self.polygon_beta[i+1]))
+			#poly = geometry.Polygon(coord_list)
+			poly = path.Path(coord_list)
+			
+			pts = np.vstack((self.mask_threshold[1], self.mask_threshold[0])).T
+			contained = poly.contains_points(pts)
+			
+			#If no points are in the polygon then break with an error
+			if np.max(contained) is False:
+				
+				#Refresh the user interface status
+				self.status_var.set("No Thresholded Pixels were Located Inside of the Analysis Region")
+				
+				#Refresh the state of the user interface window
+				self.master.update()
+				
+				#Return to caller	
+				return
+			
+			#Only keep points inside the polygon
+			self.mask_threshold = (self.mask_threshold[0][np.where(contained)[0]], self.mask_threshold[1][np.where(contained)[0]])
 		
 		#Create a thresholded image for display
 		threshold_im_display = np.copy(imdata_3d)
