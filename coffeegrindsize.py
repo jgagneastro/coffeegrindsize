@@ -41,6 +41,9 @@ threshold_image_display_name = "Thresholded"
 outlines_image_display_name = "Cluster Outlines"
 histogram_image_display_name = "Histograms"
 
+#List of reference objects with their diameters in millimeters
+reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "US Quarter":22}
+
 #Python class for the user interface window
 class coffeegrindsize_GUI:
 	
@@ -58,6 +61,11 @@ class coffeegrindsize_GUI:
 		self.img_threshold = None
 		self.img_clusters = None
 		self.img_histogram = None
+		
+		#This variable contains the starting point of line for drawing
+		self.linex_start = None
+		self.liney_start = None
+		self.line_obj = None
 		
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
@@ -112,6 +120,23 @@ class coffeegrindsize_GUI:
 		#This adds a vertical spacing in the options frame
 		self.label_separator()
 		
+		#All options related to image scale
+		self.label_title("Physical Scale of the Image:")
+		
+		#Length of the reference object
+		self.pixel_length_var, self.pixel_length_id = self.label_entry(1, "Reference Pixel Length:", "pix", entry_id=True)
+		self.physical_length_var, self.physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True)
+		self.pixel_length_id.config(state=DISABLED)
+		
+		#Provide a menu of reference objects
+		self.reference_object = self.dropdown_entry("Reference Objects:", list(reference_objects_dict.keys()), self.change_reference_object)
+		
+		#Physical size of one pixel in the coffee grounds picture
+		#For now this needs to be input manually
+		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm")
+		
+		self.label_separator()
+		
 		#All options related to image thresholding
 		self.label_title("Threshold Step:")
 		
@@ -122,10 +147,6 @@ class coffeegrindsize_GUI:
 		
 		#All options related to particle detection
 		self.label_title("Particle Detection Step:")
-		
-		#Physical size of one pixel in the coffee grounds picture
-		#For now this needs to be input manually
-		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "mm/pix")
 		
 		#Maximum cluster diameter that should be considered a valid coffee particle
 		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix")
@@ -173,12 +194,12 @@ class coffeegrindsize_GUI:
 		self.display_type = self.dropdown_entry("Display Type:", choices, self.change_display_type)
 		
 		#Button for resetting zoom in the displayed image
-		reset_zoom_button = Button(self.frame_options, text="Reset Zoom Parameters", command=self.reset_zoom)
+		reset_zoom_button = Button(self.frame_options, text="Reset Zoom", command=self.reset_zoom)
 		reset_zoom_button.grid(row=self.options_row, column=1, columnspan=2)
 		self.options_row += 1
 		
 		#Add a few horizontal spaces
-		for i in range(12):
+		for i in range(6):
 			self.label_separator()
 		
 		#Button for resetting all options to default
@@ -263,6 +284,10 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind("<ButtonPress-1>", self.move_start)
 		self.image_canvas.bind("<B1-Motion>", self.move_move)
 		
+		#Set up key bindins for drawing a line
+		self.image_canvas.bind("<ButtonPress-2>", self.line_start)
+		self.image_canvas.bind("<B2-Motion>", self.line_move)
+		
 		#Set up key bindings for zooming in and out with the i/o keys
 		self.image_canvas.bind_all("i", self.zoom_in)
 		self.image_canvas.bind_all("o", self.zoom_out)
@@ -270,6 +295,33 @@ class coffeegrindsize_GUI:
 	#Method to open blog web page
 	def blog_goto(self, *args):
 		webbrowser.open("https://jgagneastro.wordpress.com/2018/11/30/brewing-better-coffee/")  # Go to example.com
+	
+	#Method to change the reference object on the image
+	def change_reference_object(self, *args):
+		
+		#Set the physical size of the reference object
+		self.physical_length_var.set(reference_objects_dict[self.reference_object.get()])
+		
+		#Enable or disable the manual data entry depending on dictionary value
+		if self.reference_object.get() == "Custom":
+			self.physical_length_id.config(state=NORMAL)
+		else:
+			self.physical_length_id.config(state=DISABLED)
+		
+		#Update the resulting pixel scale
+		self.update_pixel_scale()
+	
+	#Method to update the pixel scale
+	def update_pixel_scale(self):
+		
+		#Calculate pixel scale
+		pixel_scale = float(self.pixel_length_var.get())/float(self.physical_length_var.get())
+		
+		#Make it a string
+		pixel_scale_str = "{0:.{1}f}".format(pixel_scale, 3)
+		
+		#Update the object value and display
+		self.pixel_scale_var.set(pixel_scale_str)
 	
 	#Method to register changes in the histogram type option
 	def change_histogram_type(self, *args):
@@ -365,7 +417,7 @@ class coffeegrindsize_GUI:
 		return data_var
 	
 	#Method to display a label in the options frame
-	def label_entry(self, default_var, text, units_text, columnspan=None, width=None):
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False):
 		
 		#Default width is located in the internal class variables
 		if width is None:
@@ -392,8 +444,12 @@ class coffeegrindsize_GUI:
 		#Update the row where next labels and entries will be displayed
 		self.options_row += 1
 		
-		#Return value of the bound variable to the caller
-		return data_var
+		#Return data entry ID to caller if required
+		if entry_id is True:
+			return data_var, data_entry
+		else:
+			#Otherwise return just value of the bound variable to the caller
+			return data_var
 	
 	#Method to display a title for option groups
 	def label_title(self, text):
@@ -435,6 +491,33 @@ class coffeegrindsize_GUI:
 	#Method to execute the move of a drag
 	def move_move(self, event):
 		self.image_canvas.scan_dragto(event.x, event.y, gain=1)
+	
+	#Method to set the starting point of a line
+	def line_start(self, event):
+		self.linex_start = event.x + self.image_canvas.canvasx(0)
+		self.liney_start = event.y + self.image_canvas.canvasy(0)
+		
+	#Method to draw the line
+	def line_move(self, event):
+		
+		#Destroy any existing line
+		if self.line_obj is not None:
+			self.image_canvas.delete(self.line_obj)
+		
+		#Calculate current x and y positions
+		cur_x = event.x + self.image_canvas.canvasx(0)
+		cur_y = event.y + self.image_canvas.canvasy(0)
+		
+		#Redraw line
+		self.line_obj = self.image_canvas.create_line(self.linex_start, self.liney_start, cur_x, cur_y, fill="red")
+		
+		#Update length of line in pixels
+		line_length = np.sqrt((cur_x - self.linex_start)**2 + (cur_y - self.liney_start)**2)/self.scale
+		line_length_str = "{0:.{1}f}".format(line_length, 1)
+		self.pixel_length_var.set(line_length_str)
+		
+		#Update pixel scale
+		self.update_pixel_scale()
 	
 	#Method to track the mouse position
 	def motion(self, event):
@@ -537,7 +620,7 @@ class coffeegrindsize_GUI:
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
-		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Kinu_Victor/Kinu3.4_1_sub.png"
+		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
 		
 		#Do not delete
 		#Invoke a file dialog to select image
