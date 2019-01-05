@@ -16,7 +16,7 @@ stop = pdb.set_trace
 def_threshold = 58.8
 
 #Default value for the pixel scale (pixels/millimeters)
-def_pixel_scale = 0.177
+def_pixel_scale = 21.000
 
 #Default value for the maximum diameter of a single cluster (pixels)
 #Smaller values will speed up the code slightly
@@ -123,9 +123,11 @@ class coffeegrindsize_GUI:
 		#All options related to image scale
 		self.label_title("Physical Scale of the Image:")
 		
+		def_pix_len = def_pixel_scale*float(reference_objects_dict["Custom"])
+		
 		#Length of the reference object
-		self.pixel_length_var, self.pixel_length_id = self.label_entry(1, "Reference Pixel Length:", "pix", entry_id=True)
-		self.physical_length_var, self.physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True)
+		self.pixel_length_var, self.pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True)
+		self.physical_length_var, self.physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale")
 		self.pixel_length_id.config(state=DISABLED)
 		
 		#Provide a menu of reference objects
@@ -416,8 +418,11 @@ class coffeegrindsize_GUI:
 		#Return internal variable to caller
 		return data_var
 	
+	def test(self):
+		print("!")
+	
 	#Method to display a label in the options frame
-	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False):
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None):
 		
 		#Default width is located in the internal class variables
 		if width is None:
@@ -432,6 +437,12 @@ class coffeegrindsize_GUI:
 		#Display the label for the name of the option
 		data_label = Label(self.frame_options, text=text)
 		data_label.grid(row=self.options_row, sticky=E)
+		
+		#Link data entry to an event if this is required
+		if event_on_entry is not None:
+			#Determine the function to be triggered
+			function_trigger = getattr(self, event_on_entry)
+			data_var.trace("w", lambda name, index, mode, data_var=data_var: function_trigger())
 		
 		#Display the data entry box
 		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
