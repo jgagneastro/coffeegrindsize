@@ -593,6 +593,10 @@ class coffeegrindsize_GUI:
 				self.img = self.img_source
 			if self.display_type.get() == threshold_image_display_name:
 				self.img = self.img_threshold
+			if self.display_type.get() == outlines_image_display_name:
+				self.img = self.img_clusters
+			if self.display_type.get() == histogram_image_display_name:
+				self.img = self.img_histogram
 			
 			#Determine the size of the image to be drawn and scale it appropriately
 			iw, ih = self.img.size
@@ -859,8 +863,8 @@ class coffeegrindsize_GUI:
 		
 		#Do not delete
 		#Invoke a file dialog to select image
-		#image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
-		image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
+		#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
@@ -1259,8 +1263,8 @@ class coffeegrindsize_GUI:
 			xmean = int(round(self.cluster_data[i]["XMEAN"]))
 			ymean = int(round(self.cluster_data[i]["YMEAN"]))
 			cluster_map_display[xmean, ymean, 0] = 40
-			cluster_map_display[xmean, ymean, 0] = 40
-			cluster_map_display[xmean, ymean, 0] = 255
+			cluster_map_display[xmean, ymean, 1] = 40
+			cluster_map_display[xmean, ymean, 2] = 255
 		
 		#Transform the display array into a PIL image
 		self.img_clusters = Image.fromarray(cluster_map_display)
