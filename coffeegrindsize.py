@@ -23,7 +23,7 @@ def_pixel_scale = 21.000
 
 #Default value for the maximum diameter of a single cluster (pixels)
 #Smaller values will speed up the code slightly
-def_max_cluster_axis = 500
+def_max_cluster_axis = 100
 
 #Default value for the minimum surface of a cluster (pixels squared)
 def_min_surface = 5
@@ -1223,7 +1223,59 @@ class coffeegrindsize_GUI:
 			self.clusters_roundness[i] = self.cluster_data[i]["ROUNDNESS"]
 		
 		#Set the status to completed
-		self.status_var.set("Particle Detection Analysis Done !")
+		self.status_var.set("Particle Detection Analysis Done ! Creating Cluster Map Image...")
+		self.master.update()
+		
+		#Interpret the source image into a matrix of numbers
+		imdata_3d = np.array(self.img_source)
+		
+		#Create a cluster image for display
+		cluster_map_display = np.copy(imdata_3d)
+		
+		#Loop on clusters to display outlines
+		for i in range(self.nclusters):
+			
+			#Read some cluster data
+			xlist = self.cluster_data[i]["XLIST"]
+			ylist = self.cluster_data[i]["YLIST"]
+			surface = self.cluster_data[i]["SURFACE"]
+			
+			#Loop on cluster pixels
+			for l in range(surface):
+				
+				#Count neighbors
+				ineigh = np.where((np.abs(xlist - xlist[l]) <= 1) & (np.abs(ylist - ylist[l]) <= 1))
+				
+				#Skip if the pixel is surrounded
+				if ineigh[0].size == 9:
+					continue
+				
+				#Mark edge pixel in red
+				cluster_map_display[xlist[l], ylist[l], 0] = 255
+				cluster_map_display[xlist[l], ylist[l], 1] = 0
+				cluster_map_display[xlist[l], ylist[l], 2] = 0
+			
+			#Mark cluster center in blue
+			xmean = int(round(self.cluster_data[i]["XMEAN"]))
+			ymean = int(round(self.cluster_data[i]["YMEAN"]))
+			cluster_map_display[xmean, ymean, 0] = 40
+			cluster_map_display[xmean, ymean, 0] = 40
+			cluster_map_display[xmean, ymean, 0] = 255
+		
+		#Transform the display array into a PIL image
+		self.img_clusters = Image.fromarray(cluster_map_display)
+		
+		#Set the cluster map image as the currently plotted object
+		self.display_type.set(outlines_image_display_name)
+		self.img = self.img_clusters
+		
+		#Refresh the image that is displayed
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
+		#Refresh the user interface status
+		self.status_var.set("Particle Detection Analysis Done ! Cluster Map Image is Now Displayed...")
+		
+		#Refresh the state of the user interface window
 		self.master.update()
 	
 	#Method for a smoothing by moving average
