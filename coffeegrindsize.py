@@ -7,7 +7,6 @@ import numpy as np
 import webbrowser
 from matplotlib import path
 import pandas as pd
-import seaborn as sns
 import os
 
 #Temporary for debugging purposes
@@ -276,7 +275,7 @@ class coffeegrindsize_GUI:
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
-		quit_button = Button(toolbar, text="Quit", command=self.quit, highlightbackground=toolbar_bg)
+		quit_button = Button(toolbar, text="Quit", command=self.quit_gui, highlightbackground=toolbar_bg)
 		quit_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Help button
@@ -300,7 +299,7 @@ class coffeegrindsize_GUI:
 		subMenu.add_separator()
 		
 		#Add an option to quit
-		subMenu.add_command(label="Quit", command=self.quit)
+		subMenu.add_command(label="Quit", command=self.quit_gui)
 		
 		# === Create drag and zoom options for the image canvas ===
 		
@@ -1404,7 +1403,7 @@ class coffeegrindsize_GUI:
 		self.master.update()
 	
 	#Method to quit user interface
-	def quit(self):
+	def quit_gui(self):
 		root.destroy()
 	
 	#Method to display help
