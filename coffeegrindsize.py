@@ -190,6 +190,14 @@ class coffeegrindsize_GUI:
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
 		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
 		
+		#Whether the Particle Detection step should be quick and approximate
+		self.quick_var = IntVar()
+		self.quick_var.set(0)
+		quick_checkbox = Checkbutton(self.frame_options, text="Quick & Approximate", variable=self.quick_var)
+		quick_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
+		
+		self.options_row += 1
+		
 		self.label_separator()
 		
 		#All options related to particle detection
@@ -204,10 +212,10 @@ class coffeegrindsize_GUI:
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
-		xlog_var = IntVar()
-		xlog_var.set(1)
-		checkbox1 = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=xlog_var)
-		checkbox1.grid(row=self.options_row, columnspan=2, sticky=E)
+		self.xlog_var = IntVar()
+		self.xlog_var.set(1)
+		xlog_checkbox = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=self.xlog_var)
+		xlog_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
 		
 		self.options_row += 1
 		
@@ -1252,92 +1260,106 @@ class coffeegrindsize_GUI:
 				#Skip this loop element
 				continue
 			
-			#Order the cluster pixels w-r-t their distance from the current starting pixel
-			dcurrent2 = (self.mask_threshold[0][iclust] - self.mask_threshold[0][icurrent])**2 + (self.mask_threshold[1][iclust] - self.mask_threshold[1][icurrent])**2
-			iclust = iclust[np.argsort(dcurrent2)]
-			
-			#Identify the current pixel in this cluster
-			icurrent_in_clust = np.where(iclust == icurrent)
-			
-			#Check that the current pixel was found only once
-			if icurrent_in_clust[0].size != 1:
-				stop()
-				raise ValueError("The starting pixel was not found in a cluster. This should never happen !")
-			
-			#Create a cost function along the positions of this cluster for pixel rejection
+			#Create a map of the blue channel flux
 			imdata_mask_cluster = imdata_mask[iclust]
-			cost = ( imdata_mask_cluster - imdata_mask[icurrent] )**2/self.background_median**2
 			
-			#Cost cannot be negative
-			cost = np.maximum(cost, 0)
-			
-			#Loop on the cluster and check if the cost along the path to the starting pixel is exceeded
-			iclust_filtered = np.copy(icurrent_in_clust[0])#== glist
-			maxcost_along_path = np.full(iclust.size, np.nan)
-			for ci in range(iclust.size):
+			#Unless the quick option is selected, now do a rejection of pixels based on the image values in the blue channel. The goal of this step is to break clumps of coffee grounds
+			if self.quick_var.get() == 1:
 				
-				#Skip current pixel if it is the starting point
-				if iclust[ci] == icurrent:
-					continue
+				#The full cluster is adopted
+				iclust_filtered = np.arange(iclust.size)
 				
-				#Make a list of all current pixels that are almost as dark as the reference pixel
-				idark_in_list = np.where( imdata_mask_cluster[iclust_filtered] <= ( ( self.background_median - imdata_mask[icurrent] )*reference_threshold + imdata_mask[icurrent] ) )
-				idark = iclust[iclust_filtered[idark_in_list[0]]]
+				#Some variables that will be needed as outputs
+				maxcost_along_path = np.full(iclust.size, np.nan)
+				cost = np.full(iclust.size, np.nan)
 				
-				#There should be at least one dark pixel
-				if idark.size == 0:
+			else:
+				
+				#Order the cluster pixels w-r-t their distance from the current starting pixel
+				dcurrent2 = (self.mask_threshold[0][iclust] - self.mask_threshold[0][icurrent])**2 + (self.mask_threshold[1][iclust] - self.mask_threshold[1][icurrent])**2
+				iclust = iclust[np.argsort(dcurrent2)]
+				
+				#Identify the current pixel in this cluster
+				icurrent_in_clust = np.where(iclust == icurrent)
+				
+				#Check that the current pixel was found only once
+				if icurrent_in_clust[0].size != 1:
 					stop()
-					raise ValueError("There should be at least one dark pixel in the cluster, this should never happen !")
+					raise ValueError("The starting pixel was not found in a cluster. This should never happen !")
 				
-				#Pick the nearest reference dark pixel
-				if idark.size > 1:
-					dist2 = ( self.mask_threshold[0][idark] - self.mask_threshold[0][iclust[ci]] )**2 + ( self.mask_threshold[1][idark] - self.mask_threshold[1][iclust[ci]] )**2
-					idark = idark[np.argmin(dist2)]
+				#Create a cost function along the positions of this cluster for pixel rejection
+				cost = ( imdata_mask_cluster - imdata_mask[icurrent] )**2/self.background_median**2
 				
-				#If the current pixel was picked as a reference dark pixel then it is automatically accepted
-				if iclust[ci] == idark:
+				#Cost cannot be negative
+				cost = np.maximum(cost, 0)
+				
+				#Loop on the cluster and check if the cost along the path to the starting pixel is exceeded
+				iclust_filtered = np.copy(icurrent_in_clust[0])#== glist
+				maxcost_along_path = np.full(iclust.size, np.nan)
+				for ci in range(iclust.size):
 					
-					maxcost_along_path[ci] = 0.
+					#Skip current pixel if it is the starting point
+					if iclust[ci] == icurrent:
+						continue
 					
-				else:
+					#Make a list of all current pixels that are almost as dark as the reference pixel
+					idark_in_list = np.where( imdata_mask_cluster[iclust_filtered] <= ( ( self.background_median - imdata_mask[icurrent] )*reference_threshold + imdata_mask[icurrent] ) )
+					idark = iclust[iclust_filtered[idark_in_list[0]]]
 					
-					#Calculate distance between all points and a line that passes through pixel i and the reference dark pixel.
-					x1 = self.mask_threshold[0][iclust[ci]]
-					y1 = self.mask_threshold[1][iclust[ci]]
-					x2 = self.mask_threshold[0][idark]
-					y2 = self.mask_threshold[1][idark]
-					x0 = self.mask_threshold[0][iclust]
-					y0 = self.mask_threshold[1][iclust]
+					#There should be at least one dark pixel
+					if idark.size == 0:
+						stop()
+						raise ValueError("There should be at least one dark pixel in the cluster, this should never happen !")
 					
-					ddline = np.abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1) / np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
-					dd1 = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
-					dd2 = np.sqrt((x2 - x0)**2 + (y2 - y0)**2)
-					dd12 = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+					#Pick the nearest reference dark pixel
+					if idark.size > 1:
+						dist2 = ( self.mask_threshold[0][idark] - self.mask_threshold[0][iclust[ci]] )**2 + ( self.mask_threshold[1][idark] - self.mask_threshold[1][iclust[ci]] )**2
+						idark = idark[np.argmin(dist2)]
 					
-					#Select all pixels within the path of the line
-					ipath = np.where((ddline <= np.sqrt(2)) & (dd1 <= dd12) & (dd2 <= dd12))
-					
-					#Deduce distance projected on the line
-					ddonline = np.sqrt(dd2[ipath[0]]**2 - ddline[ipath[0]]**2)
-					
-					#Sort by distance along the line
-					ipath = ipath[0][np.argsort(ddonline)]
-					
-					#Interpolate cost along this path
-					cost_path = cost[ipath]
-					
-					#Boxcar-sum the cost along the path
-					if nsmooth > cost_path.size:
-						cost_path_sm = self.smooth(cost_path, nsmooth)*nsmooth
+					#If the current pixel was picked as a reference dark pixel then it is automatically accepted
+					if iclust[ci] == idark:
+						
+						maxcost_along_path[ci] = 0.
+						
 					else:
-						cost_path_sm = np.full(cost_path.size, np.sum(cost_path))
+						
+						#Calculate distance between all points and a line that passes through pixel i and the reference dark pixel.
+						x1 = self.mask_threshold[0][iclust[ci]]
+						y1 = self.mask_threshold[1][iclust[ci]]
+						x2 = self.mask_threshold[0][idark]
+						y2 = self.mask_threshold[1][idark]
+						x0 = self.mask_threshold[0][iclust]
+						y0 = self.mask_threshold[1][iclust]
+						
+						ddline = np.abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1) / np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
+						dd1 = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+						dd2 = np.sqrt((x2 - x0)**2 + (y2 - y0)**2)
+						dd12 = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+						
+						#Select all pixels within the path of the line
+						ipath = np.where((ddline <= np.sqrt(2)) & (dd1 <= dd12) & (dd2 <= dd12))
+						
+						#Deduce distance projected on the line
+						ddonline = np.sqrt(dd2[ipath[0]]**2 - ddline[ipath[0]]**2)
+						
+						#Sort by distance along the line
+						ipath = ipath[0][np.argsort(ddonline)]
+						
+						#Interpolate cost along this path
+						cost_path = cost[ipath]
+						
+						#Boxcar-sum the cost along the path
+						if nsmooth > cost_path.size:
+							cost_path_sm = self.smooth(cost_path, nsmooth)*nsmooth
+						else:
+							cost_path_sm = np.full(cost_path.size, np.sum(cost_path))
+						
+						#Find the maximum cost along the path
+						maxcost_along_path[ci] = np.max(cost_path_sm)
 					
-					#Find the maximum cost along the path
-					maxcost_along_path[ci] = np.max(cost_path_sm)
-				
-				#If the cost does not go above the threshold then adopt this pixel
-				if maxcost_along_path[ci] < maxcost:
-					iclust_filtered = np.append(iclust_filtered, ci)
+					#If the cost does not go above the threshold then adopt this pixel
+					if maxcost_along_path[ci] < maxcost:
+						iclust_filtered = np.append(iclust_filtered, ci)
 			
 			#Mark the current pixels as counted
 			counted[iclust] = True
