@@ -986,6 +986,18 @@ class coffeegrindsize_GUI:
 	#Method to launch particle detection analysis
 	def launch_psd(self):
 		
+		#Verify that an image was thresholded
+		if self.img_source is None:
+				
+				#Update the user interface status
+				self.status_var.set("Image not Thresholded Yet... Use Threshold Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
 		#Options not accessible in the GUI
 		reference_threshold = 0.1
 		nsmooth = 3
