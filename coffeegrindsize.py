@@ -37,7 +37,7 @@ def_min_x_axis = 0
 def_max_x_axis = 1000
 
 #Default name for the session (used for output filenames)
-def_session_name = "JG_PSD"
+def_session_name = "PSD_"+time.strftime("%Y%m%d_%Hh%Mm%Ss")
 
 original_image_display_name = "Original"
 threshold_image_display_name = "Thresholded"
@@ -77,6 +77,9 @@ class coffeegrindsize_GUI:
 		self.polygon_alpha = None
 		self.polygon_beta = None
 		self.selreg_current_line = None
+		
+		#These variables will contain cluster information
+		self.cluster_data = None
 		
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
@@ -262,7 +265,7 @@ class coffeegrindsize_GUI:
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to output data to the disk
-		save_button = Button(toolbar, text="Save Data...", command=self.launch_psd, highlightbackground=toolbar_bg)
+		save_button = Button(toolbar, text="Save Data...", command=self.save_data, highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
@@ -320,7 +323,7 @@ class coffeegrindsize_GUI:
 			return
 		
 		#Verify that an image is loaded
-		if self.img_source == None:
+		if self.img_source is None:
 				
 				#Update the user interface status
 				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
@@ -432,7 +435,7 @@ class coffeegrindsize_GUI:
 		
 		#Verify that original image is loaded
 		if self.display_type.get() == original_image_display_name:
-			if self.img_source == None:
+			if self.img_source is None:
 				
 				#Update the user interface status
 				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
@@ -445,7 +448,7 @@ class coffeegrindsize_GUI:
 		
 		#Verify that thresholded image is loaded
 		if self.display_type.get() == threshold_image_display_name:
-			if self.img_threshold == None:
+			if self.img_threshold is None:
 				
 				#Update the user interface status
 				self.status_var.set("Thresholded Image not Available Yet... Use Threshold Image Button...")
@@ -458,7 +461,7 @@ class coffeegrindsize_GUI:
 		
 		#Verify that cluster outlines image is loaded
 		if self.display_type.get() == outlines_image_display_name:
-			if self.img_clusters == None:
+			if self.img_clusters is None:
 				
 				#Update the user interface status
 				self.status_var.set("Cluster Outlines Image not Available Yet... Use Launch Particle Detection Analysis Button...")
@@ -471,7 +474,7 @@ class coffeegrindsize_GUI:
 		
 		#Verify that cluster outlines image is loaded
 		if self.display_type.get() == histogram_image_display_name:
-			if self.img_histogram == None:
+			if self.img_histogram is None:
 				
 				#Update the user interface status
 				self.status_var.set("Histogram Figure not Available Yet... Use Create Histogram Figure Button...")
@@ -900,7 +903,7 @@ class coffeegrindsize_GUI:
 	def threshold_image(self):
 		
 		#Verify that an image was loaded
-		if self.img_source == None:
+		if self.img_source is None:
 				
 				#Update the user interface status
 				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
@@ -990,6 +993,8 @@ class coffeegrindsize_GUI:
 		
 		#Read options from internal variables
 		max_cluster_axis = float(self.max_cluster_axis_var.get())
+		min_surface_var = float(self.min_surface_var.get())
+		min_roundness_var = float(self.min_roundness_var.get())
 		
 		#Sort the thresholded pixel indices by increasing brightness in the blue channel
 		sort_indices = np.argsort(self.imdata[self.mask_threshold])
@@ -1048,6 +1053,14 @@ class coffeegrindsize_GUI:
 			ipreclust = iopen[iwithinmax]
 			qc_indices = self.quick_cluster(self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent])
 			iclust = ipreclust[qc_indices]
+			stop()
+			
+			#df = pd.DataFrame({"X":self.mask_threshold[0][iclust], "Y":self.mask_threshold[1][iclust]})
+			#df.to_csv("test.csv")
+			
+			#Skip cluster if surface is too small
+			if iclust.size < min_surface_var:
+				continue
 			
 			#Order the cluster pixels w-r-t their distance from the current starting pixel
 			dcurrent2 = (self.mask_threshold[0][iclust] - self.mask_threshold[0][icurrent])**2 + (self.mask_threshold[1][iclust] - self.mask_threshold[1][icurrent])**2
@@ -1124,9 +1137,6 @@ class coffeegrindsize_GUI:
 					cost_path = cost[ipath]
 					
 					#Boxcar-sum the cost along the path
-					if cost_path.size <= 1:
-						stop()
-					
 					if nsmooth > cost_path.size:
 						cost_path_sm = self.smooth(cost_path, nsmooth)*nsmooth
 					else:
@@ -1146,7 +1156,7 @@ class coffeegrindsize_GUI:
 			surface = iclust_filtered.size
 			
 			#Skip cluster if surface is too small
-			if surface < float(self.min_surface_var.get()):
+			if surface < min_surface_var:
 				continue
 			
 			#Create a list of positions and flux for this cluster
@@ -1163,6 +1173,10 @@ class coffeegrindsize_GUI:
 			dlist = np.maximum(dlist, 1e-4)
 			axis = np.max(dlist)
 			
+			#Skip cluster if axis is too large
+			if axis > max_cluster_axis:
+				continue
+			
 			#Determine roundness from the ratio of thresholded pixels in the circle to the ratio of total pixels
 			if surface == 1:
 				roundness = 1
@@ -1170,7 +1184,7 @@ class coffeegrindsize_GUI:
 				roundness = float(surface) / ( np.pi*float(axis)**2 )
 			
 			#Skip cluster if roundness is too small
-			if roundness < float(self.min_roundness_var.get()):
+			if roundness < min_roundness_var:
 				continue
 			
 			#Create a structure with the cluster information
@@ -1260,6 +1274,7 @@ class coffeegrindsize_GUI:
 			#Remove the newly selected pixels from the decaying lists
 			xlist_decay = np.delete(xlist_decay, isel[0])
 			ylist_decay = np.delete(ylist_decay, isel[0])
+			ilist_decay = np.delete(ilist_decay, isel[0])
 			
 		#Return the final list of indices to the caller
 		return iout
@@ -1270,7 +1285,32 @@ class coffeegrindsize_GUI:
 	
 	#Method to save data to disk
 	def save_data(self):
-		print("Not coded yet")
+		
+		#Verify if PSD analysis was done
+		if self.cluster_data is None:
+			
+			#Update the user interface status
+			self.status_var.set("Particles not Detected Yet... Use Launch Particle Detection Analysis Button...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
+		#Create a Pandas dataframe for easier saving
+		dataframe = pd.DataFrame({"AXIS":self.clusters_axis,"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness})
+		dataframe.index.name = "ID"
+		
+		#Save file to CSV
+		filename = self.session_name_var.get()+"_data.csv"
+		dataframe.to_csv(filename)
+		
+		#Update the user interface status
+		self.status_var.set("Data Saved to "+filename+"...")
+		
+		#Update the user interface
+		self.master.update()
 	
 	#Method to quit user interface
 	def quit(self):
