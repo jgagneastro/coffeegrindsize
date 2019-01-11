@@ -400,7 +400,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to open blog web page
 	def blog_goto(self, *args):
-		webbrowser.open("https://jgagneastro.wordpress.com/2018/11/30/brewing-better-coffee/")  # Go to example.com
+		webbrowser.open("https://coffeeadastra.com")  # Go to example.com
 	
 	#Method to change the reference object on the image
 	def change_reference_object(self, *args):
@@ -856,11 +856,11 @@ class coffeegrindsize_GUI:
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
-		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
 		
 		#Do not delete
 		#Invoke a file dialog to select image
-		#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		#image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
+		image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
