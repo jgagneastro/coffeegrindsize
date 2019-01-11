@@ -8,7 +8,7 @@ import webbrowser
 from matplotlib import path
 import pandas as pd
 import seaborn as sns
-
+#import os
 
 #Temporary for debugging purposes
 import pdb
@@ -47,6 +47,9 @@ histogram_image_display_name = "Histograms"
 
 #List of reference objects with their diameters in millimeters
 reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
+
+#Default output directory
+def_output_dir = os.path.expanduser("~")
 
 #Python class for the user interface window
 class coffeegrindsize_GUI:
