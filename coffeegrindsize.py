@@ -6,6 +6,8 @@ import time
 import numpy as np
 import webbrowser
 from matplotlib import path
+import pandas as pd
+
 
 #Temporary for debugging purposes
 import pdb
@@ -24,7 +26,7 @@ def_pixel_scale = 21.000
 def_max_cluster_axis = 500
 
 #Default value for the minimum surface of a cluster (pixels squared)
-def_min_surface = 2
+def_min_surface = 5
 
 #Default value for the minimum roundness of a cluster (no units)
 #Roundness is defined as the ratio of cluster to all pixels in the smallest circle that encompasses all pixels of a cluster
@@ -981,6 +983,14 @@ class coffeegrindsize_GUI:
 	#Method to launch particle detection analysis
 	def launch_psd(self):
 		
+		#Options not accessible in the GUI
+		reference_threshold = 0.1
+		nsmooth = 3
+		maxcost = 0.35
+		
+		#Read options from internal variables
+		max_cluster_axis = float(self.max_cluster_axis_var.get())
+		
 		#Sort the thresholded pixel indices by increasing brightness in the blue channel
 		sort_indices = np.argsort(self.imdata[self.mask_threshold])
 		self.mask_threshold = (self.mask_threshold[0][sort_indices], self.mask_threshold[1][sort_indices])
@@ -990,10 +1000,11 @@ class coffeegrindsize_GUI:
 		#imx = np.tile(np.arange(self.imdata.shape[1]),(self.imdata.shape[0],1))
 		#imy = np.tile(np.arange(self.imdata.shape[0]),(self.imdata.shape[1],1)).transpose()
 		
-		#Catalog image positions and brightness
-		#gmaskall_X = self.mask_threshold[0]
-		#gmaskall_Y = self.mask_threshold[1]
-		#gmaskall_Z = self.imdata[self.mask_threshold]
+		#Catalog image brightness
+		imdata_mask = self.imdata[self.mask_threshold]
+		
+		#Create an empty list of clusters
+		self.cluster_data = []
 		
 		#Start the creation of clusters
 		counted = np.zeros(self.mask_threshold[0].size, dtype=bool)
@@ -1004,23 +1015,255 @@ class coffeegrindsize_GUI:
 				frac_counted = np.sum(counted)/self.mask_threshold[0].size*100
 				frac_counted = np.minimum(frac_counted,99.9)
 				frac_counted_str = "{0:.{1}f}".format(frac_counted, 1)
-				self.status_var.set("Iteration #"+str(i)+"; Fraction of thresholded pixels that were analyzed: "+frac_counted_str+' %')
+				self.status_var.set("Iteration #"+str(i)+"; Fraction of thresholded pixels that were analyzed: "+frac_counted_str+" %")
 				self.master.update()
 			
-			#Placeholder
-			time.sleep(0.1)
+			#Select all thresholded pixels that were not yet included in a cluster
+			#(we call those "open" pixels)
+			iopen = np.where(counted == False)[0]
+			
+			#Break the loop if all pixels were counted
+			if iopen.size == 0:
+				break
+			
+			#Select the first thresholded pixel that was not yet included in a cluster
+			icurrent = iopen[0]
+			
+			#Calculate distances between current pixel and all other open pixels
+			dopen2 = (self.mask_threshold[0][icurrent] - self.mask_threshold[0][iopen])**2 + (self.mask_threshold[1][icurrent] - self.mask_threshold[1][iopen])**2
+			
+			#Select those within a reasonable distance only
+			iwithinmax = np.where(dopen2 <= max_cluster_axis**2)
+			
+			#Skip this pixel if no other pixels are close enough
+			if iwithinmax[0].size == 0:
+				
+				#Mark current pixel as counted
+				counted[icurrent] = True
+				
+				#Skip this loop element
+				continue
+			
+			#Do a quick clustering around the current pixel
+			ipreclust = iopen[iwithinmax]
+			qc_indices = self.quick_cluster(self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent])
+			iclust = ipreclust[qc_indices]
+			
+			#Order the cluster pixels w-r-t their distance from the current starting pixel
+			dcurrent2 = (self.mask_threshold[0][iclust] - self.mask_threshold[0][icurrent])**2 + (self.mask_threshold[1][iclust] - self.mask_threshold[1][icurrent])**2
+			iclust = iclust[np.argsort(dcurrent2)]
+			
+			#Identify the current pixel in this cluster
+			icurrent_in_clust = np.where(iclust == icurrent)
+			
+			#Check that the current pixel was found only once
+			if icurrent_in_clust[0].size != 1:
+				stop()
+				raise ValueError("The starting pixel was not found in a cluster. This should never happen !")
+			
+			#Create a cost function along the positions of this cluster for pixel rejection
+			imdata_mask_cluster = imdata_mask[iclust]
+			cost = ( imdata_mask_cluster - imdata_mask[icurrent] )**2/self.background_median**2
+			
+			#Cost cannot be negative
+			cost = np.maximum(cost, 0)
+			
+			#Loop on the cluster and check if the cost along the path to the starting pixel is exceeded
+			iclust_filtered = np.copy(icurrent_in_clust[0])#== glist
+			maxcost_along_path = np.full(iclust.size, np.nan)
+			for ci in range(iclust.size):
+				
+				#Skip current pixel if it is the starting point
+				if iclust[ci] == icurrent:
+					continue
+				
+				#Make a list of all current pixels that are almost as dark as the reference pixel
+				idark_in_list = np.where( imdata_mask_cluster[iclust_filtered] <= ( ( self.background_median - imdata_mask[icurrent] )*reference_threshold + imdata_mask[icurrent] ) )
+				idark = iclust[iclust_filtered[idark_in_list[0]]]
+				
+				#There should be at least one dark pixel
+				if idark.size == 0:
+					stop()
+					raise ValueError("There should be at least one dark pixel in the cluster, this should never happen !")
+				
+				#Pick the nearest reference dark pixel
+				if idark.size > 1:
+					dist2 = ( self.mask_threshold[0][idark] - self.mask_threshold[0][iclust[ci]] )**2 + ( self.mask_threshold[1][idark] - self.mask_threshold[1][iclust[ci]] )**2
+					idark = idark[np.argmin(dist2)]
+				
+				#If the current pixel was picked as a reference dark pixel then it is automatically accepted
+				if iclust[ci] == idark:
+					
+					maxcost_along_path[ci] = 0.
+					
+				else:
+					
+					#Calculate distance between all points and a line that passes through pixel i and the reference dark pixel.
+					x1 = self.mask_threshold[0][iclust[ci]]
+					y1 = self.mask_threshold[1][iclust[ci]]
+					x2 = self.mask_threshold[0][idark]
+					y2 = self.mask_threshold[1][idark]
+					x0 = self.mask_threshold[0][iclust]
+					y0 = self.mask_threshold[1][iclust]
+					
+					ddline = np.abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1) / np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
+					dd1 = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+					dd2 = np.sqrt((x2 - x0)**2 + (y2 - y0)**2)
+					dd12 = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+					
+					#Select all pixels within the path of the line
+					ipath = np.where((ddline <= np.sqrt(2)) & (dd1 <= dd12) & (dd2 <= dd12))
+					
+					#Deduce distance projected on the line
+					ddonline = np.sqrt(dd2[ipath[0]]**2 - ddline[ipath[0]]**2)
+					
+					#Sort by distance along the line
+					ipath = ipath[0][np.argsort(ddonline)]
+					
+					#Interpolate cost along this path
+					cost_path = cost[ipath]
+					
+					#Boxcar-sum the cost along the path
+					if cost_path.size <= 1:
+						stop()
+					
+					if nsmooth > cost_path.size:
+						cost_path_sm = self.smooth(cost_path, nsmooth)*nsmooth
+					else:
+						cost_path_sm = np.full(cost_path.size, np.sum(cost_path))
+					
+					#Find the maximum cost along the path
+					maxcost_along_path[ci] = np.max(cost_path_sm)
+				
+				#If the cost does not go above the threshold then adopt this pixel
+				if maxcost_along_path[ci] < maxcost:
+					iclust_filtered = np.append(iclust_filtered, ci)
+			
+			#Mark the current pixels as counted
+			counted[iclust] = True
+			
+			#Count the surface of this cluster
+			surface = iclust_filtered.size
+			
+			#Skip cluster if surface is too small
+			if surface < float(self.min_surface_var.get()):
+				continue
+			
+			#Create a list of positions and flux for this cluster
+			xlist = self.mask_threshold[0][iclust[iclust_filtered]]
+			ylist = self.mask_threshold[1][iclust[iclust_filtered]]
+			zlist = imdata_mask_cluster[iclust_filtered]
+			
+			#Compute an approximate average centroid
+			xmean = np.mean(xlist)
+			ymean = np.mean(ylist)
+			
+			#Compute an approximate semi-major axis
+			dlist = np.sqrt( ( xlist - xmean )**2 + ( ylist - ymean )**2 )
+			dlist = np.maximum(dlist, 1e-4)
+			axis = np.max(dlist)
+			
+			#Determine roundness from the ratio of thresholded pixels in the circle to the ratio of total pixels
+			if surface == 1:
+				roundness = 1
+			else:
+				roundness = float(surface) / ( np.pi*float(axis)**2 )
+			
+			#Skip cluster if roundness is too small
+			if roundness < float(self.min_roundness_var.get()):
+				continue
+			
+			#Create a structure with the cluster information
+			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist, "YLIST":ylist, "AXIS":axis, "ROUNDNESS":roundness, "XMEAN":xmean, "YMEAN":ymean, "XSTART":self.mask_threshold[0][icurrent], "YSTART":self.mask_threshold[1][icurrent], "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
+			
+			#Append cluser data with this dictionary
+			self.cluster_data.append(clusteri_data)
 		
-		stop()
+		#Read useful cluster data
+		self.nclusters = len(self.cluster_data)
+		self.clusters_surface = np.full(self.nclusters, np.nan)
+		self.clusters_axis = np.full(self.nclusters, np.nan)
+		self.clusters_roundness = np.full(self.nclusters, np.nan)
+		for i in range(self.nclusters):
+			self.clusters_surface[i] = self.cluster_data[i]["SURFACE"]
+			self.clusters_axis[i] = self.cluster_data[i]["AXIS"]
+			self.clusters_roundness[i] = self.cluster_data[i]["ROUNDNESS"]
 		
-		#self.imdata
-		#self.mask_threshold
-		
-		#Testing a live update of the user interface status
-		#for i in range(12):
-		#	time.sleep(1)
-		#	self.status_var.set("Iteration #"+str(i))
-		#	self.master.update()
+		#Set the status to completed
+		self.status_var.set("Particle Detection Analysis Done !")
+		self.master.update()
 	
+	#Method for a smoothing by moving average
+	def smooth(self, x, window_size):
+		window = np.ones(int(window_size))/float(window_size)
+		return np.convolve(x, window, "same")
+	
+	#Method for quick clustering of pixels near a coffee particle
+	def quick_cluster(self, xlist, ylist, xstart, ystart):
+		#self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent]
+		
+		#The first pixels to be checked will be those around the starting point
+		xcheck = np.array([xstart])
+		ycheck = np.array([ystart])
+		
+		#Create copies of xlist and ylist that will decay
+		#Those are the lists of pixels that still need to be considered
+		xlist_decay = np.copy(xlist)
+		ylist_decay = np.copy(ylist)
+		ilist_decay = np.arange(xlist.size)
+		
+		#Remove the starting pixel from the decaying lists
+		istart = np.where((xlist_decay == xstart) & (ylist_decay == ystart))
+		if istart[0].size != 0:
+			xlist_decay = np.delete(xlist_decay, istart[0])
+			ylist_decay = np.delete(ylist_decay, istart[0])
+			ilist_decay = np.delete(ilist_decay, istart[0])
+		
+		#Initialize a vector of output indices
+		iout = istart[0]
+		
+		#Start a loop on all pixels that need to be checked
+		for i in range(xlist.size):
+			
+			#Select all neighbor pixels
+			isel = np.where( ( np.abs(xlist_decay - xcheck[0]) + np.abs(ylist_decay - ycheck[0]) ) <= 1.001)
+			
+			#If no neighbor pixels are found, mark the current pixel as checked and move on
+			if isel[0].size == 0:
+				
+				#If this was the only pixel that currently needed to be checked break the loop
+				if xcheck.size == 1:
+					break
+				
+				#Remove current pixel from the list to be checked
+				xcheck = np.delete(xcheck, 0)
+				ycheck = np.delete(ycheck, 0)
+				
+				#Skip this element of the loop
+				continue
+			
+			#If some neighbor pixels are found add then to the output list
+			iout = np.append(iout, ilist_decay[isel[0]])
+			
+			#Also add them to the list of pixels to be checked next
+			xcheck = np.append(xcheck, xlist_decay[isel[0]])
+			ycheck = np.append(ycheck, ylist_decay[isel[0]])
+			
+			#Remove the pixel that was just checked
+			xcheck = np.delete(xcheck, 0)
+			ycheck = np.delete(ycheck, 0)
+			
+			#If the decaying lists are empty stop the whole process
+			if isel[0].size == xlist_decay.size:
+				break
+			
+			#Remove the newly selected pixels from the decaying lists
+			xlist_decay = np.delete(xlist_decay, isel[0])
+			ylist_decay = np.delete(ylist_decay, isel[0])
+			
+		#Return the final list of indices to the caller
+		return iout
+		
 	#Method to create histogram
 	def create_histogram(self):
 		print("Not coded yet")
