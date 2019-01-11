@@ -58,6 +58,9 @@ class coffeegrindsize_GUI:
 		
 		# === Set some object variables that will not be garbage collected ===
 		
+		#This variable contains the output directory
+		self.output_dir = def_output_dir
+		
 		#This variable will contain the object of the image currently displayed
 		self.image_id = None
 		
@@ -212,6 +215,16 @@ class coffeegrindsize_GUI:
 		
 		#All options related to saving output data
 		self.label_title("Output Options:")
+		
+		#Button to select an output directory
+		output_dir_button = Button(self.frame_options, text="Select Output Directory...", command=self.select_output_dir)
+		output_dir_button.grid(row=self.options_row, sticky=E)
+		
+		#Display current output dir
+		self.output_dir_var, self.output_dir_label_id = self.label_entry(self.output_dir, "", "", entry_id=True, columnspan=2, width=self.width_entries*3)
+		self.output_dir_label_id.config(state=DISABLED)
+		
+		self.options_row += 1
 		
 		#The base of the output file names
 		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
@@ -555,8 +568,9 @@ class coffeegrindsize_GUI:
 		data_var.set(str(default_var))
 		
 		#Display the label for the name of the option
-		data_label = Label(self.frame_options, text=text)
-		data_label.grid(row=self.options_row, sticky=E)
+		if text != "":
+			data_label = Label(self.frame_options, text=text)
+			data_label.grid(row=self.options_row, sticky=E)
 		
 		#Link data entry to an event if this is required
 		if event_on_entry is not None:
@@ -569,8 +583,9 @@ class coffeegrindsize_GUI:
 		data_entry.grid(row=self.options_row, column=1, columnspan=columnspan)
 		
 		#Display the physical units of this option
-		data_label_units = Label(self.frame_options, text=units_text)
-		data_label_units.grid(row=self.options_row, column=2, sticky=W)
+		if units_text != "":
+			data_label_units = Label(self.frame_options, text=units_text)
+			data_label_units.grid(row=self.options_row, column=2, sticky=W)
 		
 		#Update the row where next labels and entries will be displayed
 		self.options_row += 1
@@ -867,6 +882,21 @@ class coffeegrindsize_GUI:
 		self.session_name_var.set(str(def_session_name))
 		
 		#Update the user interface
+		self.master.update()
+	
+	#Method to select the output directory
+	def select_output_dir(self):
+		
+		#Update root to avoid problems with file dialog
+		self.master.update()
+		
+		#Invoke a file dialog to select output directory
+		self.output_dir = filedialog.askdirectory(initialdir=self.output_dir,title="Select an output directory")
+		
+		#Update the label entry
+		self.output_dir_var.set(self.output_dir)
+		
+		#Update root to avoid problems with file dialog
 		self.master.update()
 	
 	#Method to open an image from the disk
@@ -1390,6 +1420,18 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
+		#Check that a physical size was set
+		if self.pixel_scale_var.get() == "None":
+			
+			#Update the user interface status
+			self.status_var.set("The Pixel Scale Has Not Been Defined Yet... Use the Left Mouse Button to Draw a Line on a Reference Object and Choose a Reference Length in mm...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
 	
 	#Method to save data to disk
 	def save_data(self):
@@ -1412,7 +1454,7 @@ class coffeegrindsize_GUI:
 		
 		#Save file to CSV
 		filename = self.session_name_var.get()+"_data.csv"
-		dataframe.to_csv(filename)
+		dataframe.to_csv(self.output_dir+os.sep+filename)
 		
 		#Update the user interface status
 		self.status_var.set("Data Saved to "+filename+"...")
