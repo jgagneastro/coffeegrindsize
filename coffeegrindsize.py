@@ -238,6 +238,9 @@ class coffeegrindsize_GUI:
 		choices = [original_image_display_name, threshold_image_display_name, outlines_image_display_name, histogram_image_display_name]
 		self.display_type = self.dropdown_entry("Display Type:", choices, self.change_display_type)
 		
+		#Remember the previous display type in case of error
+		self.previous_display_type = choices[0]
+		
 		#Button to zoom in
 		zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
 		zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
@@ -283,6 +286,10 @@ class coffeegrindsize_GUI:
 		#Button to open an image of the coffee grounds picture
 		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image, highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to select a reference object
+		ref_obj_button = Button(toolbar, text="Select Referece Object...", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
+		ref_obj_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select region containing the coffee grounds
 		region_button = Button(toolbar, text="Select Analysis Region", command=self.select_region, highlightbackground=toolbar_bg)
@@ -350,6 +357,29 @@ class coffeegrindsize_GUI:
 		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("q", self.quit_region_select)
+	
+	def select_reference_object_mouse(self):
+		
+		#Verify that an image is loaded
+		if self.img_source is None:
+				
+				#Update the user interface status
+				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Change the mouse click mode
+		self.mouse_click_mode = "SELECT_REFERENCE_OBJECT_READY"
+		
+		#Update the user interface status
+		self.status_var.set("Use your mouse to click on one side of the reference object... You will then need to click again to set up a measuring line...")
+		
+		#Update the user interface
+		self.master.update()
 	
 	#Method to select analysis region
 	def select_region(self):
@@ -485,6 +515,9 @@ class coffeegrindsize_GUI:
 				#Update the user interface status
 				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
 				
+				#Reset to previous display type
+				self.display_type.set(self.previous_display_type)
+				
 				#Update the user interface
 				self.master.update()
 				
@@ -497,6 +530,9 @@ class coffeegrindsize_GUI:
 				
 				#Update the user interface status
 				self.status_var.set("Thresholded Image not Available Yet... Use Threshold Image Button...")
+				
+				#Reset to previous display type
+				self.display_type.set(self.previous_display_type)
 				
 				#Update the user interface
 				self.master.update()
@@ -511,6 +547,9 @@ class coffeegrindsize_GUI:
 				#Update the user interface status
 				self.status_var.set("Cluster Outlines Image not Available Yet... Use Launch Particle Detection Analysis Button...")
 				
+				#Reset to previous display type
+				self.display_type.set(self.previous_display_type)
+				
 				#Update the user interface
 				self.master.update()
 				
@@ -524,6 +563,9 @@ class coffeegrindsize_GUI:
 				#Update the user interface status
 				self.status_var.set("Histogram Figure not Available Yet... Use Create Histogram Figure Button...")
 				
+				#Reset to previous display type
+				self.display_type.set(self.previous_display_type)
+				
 				#Update the user interface
 				self.master.update()
 				
@@ -535,6 +577,9 @@ class coffeegrindsize_GUI:
 		
 		#Update the user interface status
 		self.status_var.set("Changed Display to "+self.display_type.get()+"...")
+		
+		#Remember the previous display image in case of future error
+		self.previous_display_type = self.display_type.get()
 		
 		#Update the user interface
 		self.master.update()
@@ -694,7 +739,37 @@ class coffeegrindsize_GUI:
 		if self.mouse_click_mode is None:
 			self.image_canvas.scan_mark(event.x, event.y)
 		
-		#In select region mode, add corners to polygon
+		#If this is the second click in Select Reference Object mode, end it
+		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT":
+			
+			#Tell the motion method that we are now in line drawing mode
+			self.mouse_click_mode = None
+			
+			#Refresh the user interface status
+			self.status_var.set("The length of the the reference object was set to "+self.pixel_length_var.get()+" pixels... Now select its physical size with the library in the Reference Object dropdown menu, or with a custom Reference Physical Size...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+		
+		#In Select Reference Object mode, set start of line
+		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT_READY":
+			
+			#Set the starting point for the red line
+			self.line_start(event)
+			
+			#Tell the motion method that we are now in line drawing mode
+			self.mouse_click_mode = "SELECT_REFERENCE_OBJECT"
+			
+			#Refresh the user interface status
+			self.status_var.set("Drag the red line across the reference object then click again... Be careful to exclude shadows, and make sure that the Angle of Reference Line entry is satisfactory to you...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+			
+			#Redraw image (TMP is this needed !!)
+			#self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
+		#In select Region mode, add corners to polygon
 		if self.mouse_click_mode == "SELECT_REGION":
 			
 			# === Determine mouse position in original pixel units ===
@@ -764,6 +839,15 @@ class coffeegrindsize_GUI:
 		
 		#Update the current mouse position
 		self.mouse_x, self.mouse_y = event.x, event.y
+		
+		#In Select Reference Object mode, set start of line
+		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT":
+			
+			#Set the current point for the red line
+			self.line_move(event)
+			
+			#Redraw image (TMP is this needed !!)
+			#self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
 		#In analysis selection region mode, show the next line
 		if self.mouse_click_mode == "SELECT_REGION":
