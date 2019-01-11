@@ -238,13 +238,20 @@ class coffeegrindsize_GUI:
 		choices = [original_image_display_name, threshold_image_display_name, outlines_image_display_name, histogram_image_display_name]
 		self.display_type = self.dropdown_entry("Display Type:", choices, self.change_display_type)
 		
+		#Button to zoom in
+		zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
+		zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
+		
+		zoom_out_button = Button(self.frame_options, text="Zoom Out", command=self.zoom_out_button)
+		zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
+		
 		#Button for resetting zoom in the displayed image
 		reset_zoom_button = Button(self.frame_options, text="Reset Zoom", command=self.reset_zoom)
-		reset_zoom_button.grid(row=self.options_row, column=1, columnspan=2)
+		reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
 		self.options_row += 1
 		
 		#Add a few horizontal spaces
-		for i in range(6):
+		for i in range(4):
 			self.label_separator()
 		
 		#Button for resetting all options to default
@@ -253,7 +260,7 @@ class coffeegrindsize_GUI:
 		self.options_row += 1
 		
 		#Button to open blog
-		blog_button = Button(self.frame_options, text="Read Coffee Blog", command=self.blog_goto)
+		blog_button = Button(self.frame_options, text="Read Coffee AD Astra Blog", command=self.blog_goto)
 		blog_button.grid(row=self.options_row, column=0)
 		self.options_row += 1
 		
@@ -442,6 +449,12 @@ class coffeegrindsize_GUI:
 		
 		#Update the resulting pixel scale
 		self.update_pixel_scale()
+		
+		#Update the GUI status
+		self.status_var.set("Reference Object set to "+self.reference_object.get()+"...")
+		
+		#Update the user interface
+		self.master.update()
 	
 	#Method to update the pixel scale
 	def update_pixel_scale(self):
@@ -788,6 +801,25 @@ class coffeegrindsize_GUI:
 				#Redraw line
 				self.selreg_current_line = self.image_canvas.create_line(line_x_start, line_y_start, line_x_end, line_y_end, fill="green")
 
+	
+	#Method to apply a zoom in with the button
+	def zoom_in_button(self):
+		
+		#Artificially set the mouse position at the image center
+		self.mouse_x, self.mouse_y = self.last_image_x, self.last_image_x
+		
+		#Apply zoom in the positive direction
+		self.zoom(None, 1)
+	
+	#Method to apply a zoom out with the button
+	def zoom_out_button(self):
+		
+		#Artificially set the mouse position at the image center
+		self.mouse_x, self.mouse_y = self.last_image_x, self.last_image_x
+		
+		#Apply zoom in the positive direction
+		self.zoom(None, -1)
+	
 	#Method to apply a zoom in
 	def zoom_in(self, event):
 		
