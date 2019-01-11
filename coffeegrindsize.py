@@ -78,6 +78,9 @@ class coffeegrindsize_GUI:
 		self.polygon_beta = None
 		self.selreg_current_line = None
 		
+		#These variables will contain thresholding information
+		self.mask_threshold = None
+		
 		#These variables will contain cluster information
 		self.cluster_data = None
 		
@@ -987,16 +990,16 @@ class coffeegrindsize_GUI:
 	def launch_psd(self):
 		
 		#Verify that an image was thresholded
-		if self.img_source is None:
-				
-				#Update the user interface status
-				self.status_var.set("Image not Thresholded Yet... Use Threshold Image Button...")
-				
-				#Update the user interface
-				self.master.update()
-				
-				#Return to caller
-				return
+		if self.mask_threshold is None:
+			
+			#Update the user interface status
+			self.status_var.set("Image not Thresholded Yet... Use Threshold Image Button...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
 		
 		#Options not accessible in the GUI
 		reference_threshold = 0.1
@@ -1065,13 +1068,17 @@ class coffeegrindsize_GUI:
 			ipreclust = iopen[iwithinmax]
 			qc_indices = self.quick_cluster(self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent])
 			iclust = ipreclust[qc_indices]
-			stop()
 			
 			#df = pd.DataFrame({"X":self.mask_threshold[0][iclust], "Y":self.mask_threshold[1][iclust]})
 			#df.to_csv("test.csv")
 			
 			#Skip cluster if surface is too small
 			if iclust.size < min_surface_var:
+				
+				#Mark current pixel as counted
+				counted[icurrent] = True
+				
+				#Skip this loop element
 				continue
 			
 			#Order the cluster pixels w-r-t their distance from the current starting pixel
