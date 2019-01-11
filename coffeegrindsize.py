@@ -7,6 +7,7 @@ import numpy as np
 import webbrowser
 from matplotlib import path
 import pandas as pd
+import seaborn as sns
 
 
 #Temporary for debugging purposes
@@ -296,7 +297,7 @@ class coffeegrindsize_GUI:
 		subMenu.add_separator()
 		
 		#Add an option to quit
-		subMenu.add_command(label="Quit", command=quit)
+		subMenu.add_command(label="Quit", command=self.quit)
 		
 		# === Create drag and zoom options for the image canvas ===
 		
@@ -1356,7 +1357,19 @@ class coffeegrindsize_GUI:
 		
 	#Method to create histogram
 	def create_histogram(self):
-		print("Not coded yet")
+		
+		#Verify that clusters were defined
+		if self.cluster_data is None:
+			
+			#Update the user interface status
+			self.status_var.set("Coffee Particles not Detected Yet... Use Launch Particle Detection Analysis Button...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
 	
 	#Method to save data to disk
 	def save_data(self):
