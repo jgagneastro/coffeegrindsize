@@ -19,7 +19,7 @@ stop = pdb.set_trace
 def_threshold = 58.8
 
 #Default value for the pixel scale (pixels/millimeters)
-def_pixel_scale = 21.000
+def_pixel_scale = None
 
 #Default value for the maximum diameter of a single cluster (pixels)
 #Smaller values will speed up the code slightly
@@ -45,7 +45,7 @@ outlines_image_display_name = "Cluster Outlines"
 histogram_image_display_name = "Histograms"
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":20, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
+reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
 
 #Default output directory
 def_output_dir = os.path.expanduser("~")
@@ -143,12 +143,19 @@ class coffeegrindsize_GUI:
 		#All options related to image scale
 		self.label_title("Physical Scale of the Image:")
 		
-		def_pix_len = def_pixel_scale*float(reference_objects_dict["Custom"])
+		if def_pixel_scale is None:
+			def_pix_len = None
+		else:
+			def_pix_len = def_pixel_scale*float(reference_objects_dict["Custom"])
 		
 		#Length of the reference object
 		self.pixel_length_var, self.pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True)
 		self.physical_length_var, self.physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale")
 		self.pixel_length_id.config(state=DISABLED)
+		
+		#Angle of selection
+		self.physical_angle_var, self.physical_angle_id = self.label_entry("None", "Angle of Reference Line:", "deg", entry_id=True)
+		self.physical_angle_id.config(state=DISABLED)
 		
 		#Provide a menu of reference objects
 		self.reference_object = self.dropdown_entry("Reference Object:", list(reference_objects_dict.keys()), self.change_reference_object)
@@ -179,8 +186,11 @@ class coffeegrindsize_GUI:
 		#Minimum cluster roundness that should be considered a valid coffee particle
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
 		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
-
+		
 		self.label_separator()
+		
+		#All options related to particle detection
+		self.label_title("Create Histogram Step:")
 		
 		choices = ["Number vs Diameter", "Number vs Surface", "Mass vs Diameter", "Mass vs Surface", "Extract vs Diameter", "Extract vs Surface", "Surface vs Diameter", "Surface vs Surface", "Extraction Yield Distribution"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", choices, self.change_histogram_type)
@@ -423,11 +433,14 @@ class coffeegrindsize_GUI:
 	#Method to update the pixel scale
 	def update_pixel_scale(self):
 		
-		#Calculate pixel scale
-		pixel_scale = float(self.pixel_length_var.get())/float(self.physical_length_var.get())
-		
-		#Make it a string
-		pixel_scale_str = "{0:.{1}f}".format(pixel_scale, 3)
+		#Calculate pixel scale. If an error arises then something was not a number
+		try:
+			pixel_scale = float(self.pixel_length_var.get())/float(self.physical_length_var.get())
+			#Make it a string
+			pixel_scale_str = "{0:.{1}f}".format(pixel_scale, 3)
+		except:
+			pixel_scale = None
+			pixel_scale_str = "None"
 		
 		#Update the object value and display
 		self.pixel_scale_var.set(pixel_scale_str)
@@ -709,6 +722,11 @@ class coffeegrindsize_GUI:
 		line_length = np.sqrt((cur_x - self.linex_start)**2 + (cur_y - self.liney_start)**2)/self.scale
 		line_length_str = "{0:.{1}f}".format(line_length, 1)
 		self.pixel_length_var.set(line_length_str)
+		
+		#Update angle of line in degrees
+		line_angle = 180.0/np.pi*np.arctan2( (cur_y - self.liney_start), (cur_x - self.linex_start) )
+		line_angle_str = "{0:.{1}f}".format(line_angle, 1)
+		self.physical_angle_var.set(line_angle_str)
 		
 		#Update pixel scale
 		self.update_pixel_scale()
