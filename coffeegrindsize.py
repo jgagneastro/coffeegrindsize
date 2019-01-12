@@ -458,6 +458,10 @@ class coffeegrindsize_GUI:
 	#Method to finish analysis region selection
 	def quit_region_select(self, event):
 		
+		#Only active if image canvas has focus
+		if self.master.focus_get() != self.image_canvas:
+			return
+		
 		#Only active in SELECT_REGION mode
 		if self.mouse_click_mode == "SELECT_REGION":
 			
@@ -539,8 +543,10 @@ class coffeegrindsize_GUI:
 	
 	#Method to register changes in the histogram type option
 	def change_histogram_type(self, *args):
-		#This is not coded yet
-		print(self.histogram_type.get())
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram()
 	
 	def change_display_type(self, *args):
 		
