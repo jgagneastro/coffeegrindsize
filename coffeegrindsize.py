@@ -226,29 +226,31 @@ class coffeegrindsize_GUI:
 		self.hist_codes = ["num_diam", "num_surf", "mass_diam", "mass_surf", "bev_diam", "bev_surf", "surf_diam", "surf_surf", "ey"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
 		
+		#Label for the data
+		self.data_label_var, self.data_label_id = self.label_entry("Current Data", "Data Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
+		
 		#Whether the X axis of the histogram should be set manually
 		#This is a checkbox
 		self.xaxis_auto_var = IntVar()
 		self.xaxis_auto_var.set(1)
-		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
-		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
-		
-		self.options_row += 1
+		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis | ", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
+		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
 		#X axis range for the histogram figure
-		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Minimum X Axis:", "", entry_id=True, event_on_entry="create_histogram")
-		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Maximum X Axis:", "", entry_id=True, event_on_entry="create_histogram")
-		
-		#By default these options are disabled
-		self.xmin_var_id.config(state=DISABLED)
-		self.xmax_var_id.config(state=DISABLED)
+		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Minimum X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
 		self.xlog_var = IntVar()
 		self.xlog_var.set(1)
-		xlog_checkbox = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=self.xlog_var, command=self.xlog_event)
-		xlog_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
+		xlog_checkbox = Checkbutton(self.frame_options, text="Log X axis | ", variable=self.xlog_var, command=self.xlog_event)
+		xlog_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
+		
+		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Maximum X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		
+		#By default these options are disabled
+		self.xmin_var_id.config(state=DISABLED)
+		self.xmax_var_id.config(state=DISABLED)
 		
 		self.options_row += 1
 		
@@ -256,13 +258,13 @@ class coffeegrindsize_GUI:
 		#This is a checkbox
 		self.nbins_auto_var = IntVar()
 		self.nbins_auto_var.set(1)
-		nbins_auto_checkbox = Checkbutton(self.frame_options, text="Automated N bins", variable=self.nbins_auto_var, command=self.nbins_auto_event)
-		nbins_auto_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
+		nbins_auto_checkbox = Checkbutton(self.frame_options, text="Automated bins | ", variable=self.nbins_auto_var, command=self.nbins_auto_event)
+		nbins_auto_checkbox.grid(row=self.options_row, columnspan=1, column=0, sticky=E)
 		
-		self.options_row += 1
+		#self.options_row += 1
 		
 		#X axis range for the histogram figure
-		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Number of bins:", "", entry_id=True, event_on_entry="create_histogram")
+		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Number of bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#By default this option is disabled
 		self.nbins_var_id.config(state=DISABLED)
@@ -273,7 +275,7 @@ class coffeegrindsize_GUI:
 		self.label_title("Output Options:")
 		
 		#Button to select an output directory
-		output_dir_button = Button(self.frame_options, text="Select Output Directory...", command=self.select_output_dir)
+		output_dir_button = Button(self.frame_options, text="Select Output Directory:", command=self.select_output_dir)
 		output_dir_button.grid(row=self.options_row, sticky=E)
 		
 		#Display current output dir
@@ -315,11 +317,11 @@ class coffeegrindsize_GUI:
 		
 		#Button for resetting all options to default
 		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
-		reset_params_button.grid(row=self.options_row, column=0)
+		reset_params_button.grid(row=self.options_row, column=0, sticky=E)
 		
 		#Button to open blog
 		blog_button = Button(self.frame_options, text="Read Coffee AD Astra Blog", command=self.blog_goto)
-		blog_button.grid(row=self.options_row, column=1)
+		blog_button.grid(row=self.options_row, column=1, columnspan=2)
 		self.options_row += 1
 		
 		# === Create a canvas to display images and figures ===
@@ -363,7 +365,7 @@ class coffeegrindsize_GUI:
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to display histogram figures
-		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=self.create_histogram, highlightbackground=toolbar_bg)
+		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=lambda: self.create_histogram(None), highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to save histogram to disk
@@ -422,14 +424,7 @@ class coffeegrindsize_GUI:
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
-			self.create_histogram()
-	
-	# #Method to refresh histograms when number of bins are changed
-	# def nbins_event(self):
-		
-	# 	#If there is already a histogram in play, refresh it
-	# 	if self.img_histogram is not None:
-	# 		self.create_histogram()
+			self.create_histogram(None)
 	
 	#Method to refresh histograms when automated bins are changed
 	def nbins_auto_event(self):
@@ -444,14 +439,14 @@ class coffeegrindsize_GUI:
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
-			self.create_histogram()
+			self.create_histogram(None)
 	
 	#Method to set the X axis options to automated
 	def xaxis_auto_event(self):
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
-			self.create_histogram()
+			self.create_histogram(None)
 		
 		#If not automated then enable the parameters
 		if self.xaxis_auto_var.get() == 0:
@@ -616,7 +611,7 @@ class coffeegrindsize_GUI:
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
-			self.create_histogram()
+			self.create_histogram(None)
 	
 	def change_display_type(self, *args):
 		
@@ -760,7 +755,7 @@ class coffeegrindsize_GUI:
 		print("!")
 	
 	#Method to display a label in the options frame
-	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None):
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None, addcol=0, event_on_enter=None):
 		
 		#Default width is located in the internal class variables
 		if width is None:
@@ -775,7 +770,7 @@ class coffeegrindsize_GUI:
 		#Display the label for the name of the option
 		if text != "":
 			data_label = Label(self.frame_options, text=text)
-			data_label.grid(row=self.options_row, sticky=E)
+			data_label.grid(row=self.options_row, sticky=E, column=addcol)
 		
 		#Link data entry to an event if this is required
 		if event_on_entry is not None:
@@ -785,12 +780,17 @@ class coffeegrindsize_GUI:
 		
 		#Display the data entry box
 		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
-		data_entry.grid(row=self.options_row, column=1, columnspan=columnspan)
+		data_entry.grid(row=self.options_row, column=1+addcol, columnspan=columnspan)
+		
+		#Bind the return key with a method
+		if event_on_enter is not None:
+			function_trigger = getattr(self, event_on_enter)
+			data_entry.bind('<Return>', function_trigger)
 		
 		#Display the physical units of this option
 		if units_text != "":
 			data_label_units = Label(self.frame_options, text=units_text)
-			data_label_units.grid(row=self.options_row, column=2, sticky=W)
+			data_label_units.grid(row=self.options_row, column=2+addcol, sticky=W)
 		
 		#Update the row where next labels and entries will be displayed
 		self.options_row += 1
@@ -805,7 +805,7 @@ class coffeegrindsize_GUI:
 	#Method to display a title for option groups
 	def label_title(self, text):
 		title_label = Label(self.frame_options, text=text, font='Helvetica 18 bold')
-		title_label.grid(row=self.options_row, sticky=W, padx=self.title_padx)
+		title_label.grid(row=self.options_row, sticky=W, padx=self.title_padx, columnspan=2)
 		self.options_row += 1
 	
 	#Method to display a vertical blank separator in the options frame
@@ -1753,7 +1753,7 @@ class coffeegrindsize_GUI:
 		return iout
 		
 	#Method to create histogram
-	def create_histogram(self):
+	def create_histogram(self, event):
 		
 		#Verify that clusters were defined
 		if self.cluster_data is None:
@@ -1901,7 +1901,7 @@ class coffeegrindsize_GUI:
 		#Plot the histogram
 		hist_color = [147,36,30]
 		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
-		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label="New Data", weights=data_weights, density=density, lw=2, rwidth=.8)
+		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label=self.data_label_var.get(), weights=data_weights, density=density, lw=2, rwidth=.8)
 		
 		#Make xlog if needed
 		if self.xlog_var.get() == 1:
@@ -1910,6 +1910,10 @@ class coffeegrindsize_GUI:
 		#Set X and Y labels
 		plt.xlabel(xlabel, fontsize=16)
 		plt.ylabel(ylabel, fontsize=16)
+		
+		
+		#Add legend
+		plt.legend()
 		
 		# Change size and font of tick labels
 		#tick_fontsize = 14
@@ -1924,9 +1928,9 @@ class coffeegrindsize_GUI:
 		majortick_fontsize = 8
 		plt.tick_params(axis='both', which='major', labelsize=majortick_fontsize)
 		
-		if self.xlog_var.get() == 1:
-			plt.tick_params(axis='x', which='major', labelrotation=90, pad=8)
-			plt.tick_params(axis='x', which='minor', labelrotation=90, labelsize=minortick_fontsize)
+		#if self.xlog_var.get() == 1:
+		#	plt.tick_params(axis='x', which='major', labelrotation=90, pad=None)
+		#	plt.tick_params(axis='x', which='minor', labelrotation=90, labelsize=minortick_fontsize)
 		
 		#Make ticks longer and thicker
 		ax.tick_params(axis="both", length=5, width=2, which="major")
@@ -1937,7 +1941,7 @@ class coffeegrindsize_GUI:
 		
 		#In xlog mode do not use scientific notation
 		if self.xlog_var.get() == 1:
-			ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+			ax.xaxis.set_minor_formatter(mticker.LogFormatter())
 			ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
 		
 		# === Transform the figure to a PIL object ===
