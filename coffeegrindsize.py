@@ -83,6 +83,9 @@ class coffeegrindsize_GUI:
 		#This variable will contain the object of the image currently displayed
 		self.image_id = None
 		
+		#This variable will keep track of the number of detected clusters
+		self.nclusters = None
+		
 		#Keep track of the mouse click mode
 		self.mouse_click_mode = None
 		
@@ -146,6 +149,10 @@ class coffeegrindsize_GUI:
 		toolbar_bg = "gray90"
 		toolbar = Frame(self.master, bg=toolbar_bg)
 		toolbar.pack(side=TOP, fill=X)
+		
+		#Create a second toolbar
+		toolbar2 = Frame(self.master, bg=toolbar_bg)
+		toolbar2.pack(side=TOP, fill=X)
 		
 		#Create a status bar at the bottom of the window
 		self.status_var = StringVar()
@@ -237,7 +244,7 @@ class coffeegrindsize_GUI:
 		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
 		#X axis range for the histogram figure
-		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Minimum X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
@@ -246,7 +253,7 @@ class coffeegrindsize_GUI:
 		xlog_checkbox = Checkbutton(self.frame_options, text="Log X axis | ", variable=self.xlog_var, command=self.xlog_event)
 		xlog_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
-		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Maximum X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#By default these options are disabled
 		self.xmin_var_id.config(state=DISABLED)
@@ -264,7 +271,7 @@ class coffeegrindsize_GUI:
 		#self.options_row += 1
 		
 		#X axis range for the histogram figure
-		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Number of bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Num. bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#By default this option is disabled
 		self.nbins_var_id.config(state=DISABLED)
@@ -316,13 +323,8 @@ class coffeegrindsize_GUI:
 		self.label_separator()
 		
 		#Button for resetting all options to default
-		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
-		reset_params_button.grid(row=self.options_row, column=0, sticky=E)
-		
-		#Button to open blog
-		blog_button = Button(self.frame_options, text="Read Coffee AD Astra Blog", command=self.blog_goto)
-		blog_button.grid(row=self.options_row, column=1, columnspan=2)
-		self.options_row += 1
+		reset_params_button = Button(self.frame_options, text="Reset All Parameters to Default", command=self.reset_status)
+		reset_params_button.grid(row=self.options_row, column=1, columnspan=2, sticky=E)
 		
 		# === Create a canvas to display images and figures ===
 		
@@ -341,11 +343,11 @@ class coffeegrindsize_GUI:
 		# === Populate the toolbar with buttons for analysis ===
 		
 		#Button to open an image of the coffee grounds picture
-		open_image_button = Button(toolbar, text="Open Image...", command=self.open_image, highlightbackground=toolbar_bg)
+		open_image_button = Button(toolbar, text="Open Image", command=self.open_image, highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select a reference object
-		ref_obj_button = Button(toolbar, text="Select Reference Object...", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
+		ref_obj_button = Button(toolbar, text="Select Reference Object", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
 		ref_obj_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select region containing the coffee grounds
@@ -353,31 +355,48 @@ class coffeegrindsize_GUI:
 		region_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to apply image threshold
-		threshold_image_button = Button(toolbar, text="Threshold Image...", command=self.threshold_image, highlightbackground=toolbar_bg)
+		threshold_image_button = Button(toolbar, text="Threshold Image", command=self.threshold_image, highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to launch the particle detection analysis
-		psd_button = Button(toolbar, text="Launch Particle Detection Analysis...", command=self.launch_psd,highlightbackground=toolbar_bg)
+		psd_button = Button(toolbar, text="Launch Particle Detection", command=self.launch_psd,highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
-		#Button to output data to the disk
-		save_button = Button(toolbar, text="Save Data...", command=self.save_data, highlightbackground=toolbar_bg)
-		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
-		
 		#Button to display histogram figures
-		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=lambda: self.create_histogram(None), highlightbackground=toolbar_bg)
+		histogram_button = Button(toolbar, text="Create Histogram", command=lambda: self.create_histogram(None), highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
+		#Read Blog Button
+		#Button to open blog
+		blog_button = Button(toolbar, text="Read Coffee AD Astra Blog", command=self.blog_goto, highlightbackground=toolbar_bg)
+		blog_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Downsample button
+		downsample_button = Button(toolbar2, text="Reduce Image Quality", command=self.downsample_image, highlightbackground=toolbar_bg)
+		downsample_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to load data from disk
+		load_data_button = Button(toolbar2, text="Load Data", command=self.load_data, highlightbackground=toolbar_bg)
+		load_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to load comparison data from disk
+		load_comparison_data_button = Button(toolbar2, text="Load Comparison Data", command=self.load_comparison_data, highlightbackground=toolbar_bg)
+		load_comparison_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to output data to the disk
+		save_button = Button(toolbar2, text="Save Data", command=self.save_data, highlightbackground=toolbar_bg)
+		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
 		#Button to save histogram to disk
-		savehist_button = Button(toolbar, text="Save View...", command=self.save_histogram, highlightbackground=toolbar_bg)
+		savehist_button = Button(toolbar2, text="Save View", command=self.save_histogram, highlightbackground=toolbar_bg)
 		savehist_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
-		quit_button = Button(toolbar, text="Quit", command=self.quit_gui, highlightbackground=toolbar_bg)
+		quit_button = Button(toolbar2, text="Quit", command=self.quit_gui, highlightbackground=toolbar_bg)
 		quit_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Help button
-		help_button = Button(toolbar, text="Help", command=self.launch_help, highlightbackground=toolbar_bg)
+		help_button = Button(toolbar2, text="Help", command=self.launch_help, highlightbackground=toolbar_bg)
 		help_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		# === Create a menu bar (File, Edit...) ===
@@ -393,7 +412,7 @@ class coffeegrindsize_GUI:
 		subMenu.add_separator()
 		
 		#Add an option to downsample images
-		subMenu.add_command(label="Downsample Image...", command=self.downsample_image)
+		subMenu.add_command(label="Reduce Image Quality...", command=self.downsample_image)
 		subMenu.add_separator()
 		
 		#Add an option for debugging
@@ -656,7 +675,7 @@ class coffeegrindsize_GUI:
 			if self.img_clusters is None:
 				
 				#Update the user interface status
-				self.status_var.set("Cluster Outlines Image not Available Yet... Use Launch Particle Detection Analysis Button...")
+				self.status_var.set("Cluster Outlines Image not Available Yet... Use Launch Particle Detection Button...")
 				
 				#Reset to previous display type
 				self.display_type.set(self.previous_display_type)
@@ -1253,6 +1272,12 @@ class coffeegrindsize_GUI:
 		#Redraw the image
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
+		#Update the user interface status
+		self.status_var.set("The Image was Downsampled by a Factor two... Current Size is ("+str(self.img.size[0])+", "+str(self.img.size[1])+")")
+		
+		#Update the user interface
+		self.master.update()
+		
 	#Method to open an image from the disk
 	def open_image(self):
 		
@@ -1269,7 +1294,7 @@ class coffeegrindsize_GUI:
 		#Do not delete
 		#Invoke a file dialog to select image
 		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
-		#image_filename = filedialog.askopenfilename(initialdir="/",title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		#image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
@@ -1477,9 +1502,6 @@ class coffeegrindsize_GUI:
 			ipreclust = iopen[iwithinmax]
 			qc_indices = self.quick_cluster(self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent])
 			iclust = ipreclust[qc_indices]
-			
-			#df = pd.DataFrame({"X":self.mask_threshold[0][iclust], "Y":self.mask_threshold[1][iclust]})
-			#df.to_csv("test.csv")
 			
 			#Skip cluster if surface is too small
 			if iclust.size < min_surface_var:
@@ -1786,10 +1808,10 @@ class coffeegrindsize_GUI:
 	def create_histogram(self, event):
 		
 		#Verify that clusters were defined
-		if self.cluster_data is None:
+		if self.nclusters is None:
 			
 			#Update the user interface status
-			self.status_var.set("Coffee Particles not Detected Yet... Use Launch Particle Detection Analysis Button...")
+			self.status_var.set("Coffee Particles not Detected Yet... Use Launch Particle Detection Button...")
 			
 			#Update the user interface
 			self.master.update()
@@ -1993,6 +2015,10 @@ class coffeegrindsize_GUI:
 		self.display_type.set(histogram_image_display_name)
 		self.img = self.img_histogram
 		
+		#Remove the no label image if no image was loaded yet
+		if self.img_source is None:
+			self.noimage_label.pack_forget()
+		
 		#Refresh the image that is displayed
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
@@ -2002,6 +2028,57 @@ class coffeegrindsize_GUI:
 		#Refresh the state of the user interface window
 		self.master.update()
 	
+	#Method to load data from disk
+	def load_data(self):
+		
+		#Update root to avoid problems with file dialog
+		self.master.update()
+		
+		#Invoke a file dialog to select data file
+		csv_data_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
+		
+		#Create a Pandas dataframe from the CSV data
+		dataframe = pd.read_csv(csv_data_filename)
+		
+		#Ingest data in system variables
+		self.clusters_surface = dataframe["SURFACE"].values
+		self.clusters_roundness = dataframe["ROUNDNESS"].values
+		self.clusters_long_axis = dataframe["LONG_AXIS"].values
+		self.clusters_short_axis = dataframe["SHORT_AXIS"].values
+		self.clusters_volume = dataframe["VOLUME"].values
+		self.nclusters = self.clusters_surface.size
+		self.pixel_scale_var.set(str(dataframe["PIXEL_SCALE"].values[0]))
+		
+		#Update the user interface status
+		self.status_var.set("Data Loaded into Memory...")
+		
+		#Refresh histogram
+		self.create_histogram(None)
+		
+	#Method to load data from disk
+	def load_comparison_data(self):
+		
+		#Update root to avoid problems with file dialog
+		self.master.update()
+		
+		#Invoke a file dialog to select data file
+		csv_data_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
+		
+		#Create a Pandas dataframe from the CSV data
+		dataframe = pd.read_csv(csv_data_filename)
+		
+		#Ingest data in system variables
+		self.comparison_clusters_surface = dataframe["SURFACE"].values
+		self.comparison_clusters_roundness = dataframe["ROUNDNESS"].values
+		self.comparison_clusters_long_axis = dataframe["LONG_AXIS"].values
+		self.comparison_clusters_short_axis = dataframe["SHORT_AXIS"].values
+		self.comparison_clusters_volume = dataframe["VOLUME"].values
+		self.comparison_nclusters = self.comparison_clusters_surface.size
+		self.comparison_pixel_scale_var.set(str(dataframe["PIXEL_SCALE"].values[0]))
+		
+		#Update the user interface status
+		self.status_var.set("Comparison Data Loaded into Memory...")
+		
 	#Method to save data to disk
 	def save_data(self):
 		
@@ -2009,7 +2086,7 @@ class coffeegrindsize_GUI:
 		if self.cluster_data is None:
 			
 			#Update the user interface status
-			self.status_var.set("Particles not Detected Yet... Use Launch Particle Detection Analysis Button...")
+			self.status_var.set("Particles not Detected Yet... Use Launch Particle Detection Button...")
 			
 			#Update the user interface
 			self.master.update()
@@ -2018,7 +2095,7 @@ class coffeegrindsize_GUI:
 			return
 		
 		#Create a Pandas dataframe for easier saving
-		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume})
+		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume,"PIXEL_SCALE":float(self.pixel_scale_var.get())})
 		dataframe.index.name = "ID"
 		
 		#Save file to CSV
