@@ -5,9 +5,23 @@ from PIL import ImageTk, Image
 import time
 import numpy as np
 import webbrowser
-from matplotlib import path
 import pandas as pd
 import os
+
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from matplotlib import path
+
+#Set thick axes
+from matplotlib import rc
+from pylab import gca
+rc("axes", linewidth=2)
+
+#Set latex fonts
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+#rc('text', usetex=True)
 
 #Temporary for debugging purposes
 import pdb
@@ -33,8 +47,8 @@ def_min_surface = 5
 def_min_roundness = 0
 
 #Default X axis range for the histogram (variable units)
-def_min_x_axis = 0
-def_max_x_axis = 1000
+def_min_x_axis = 0.01
+def_max_x_axis = 10
 
 #Default name for the session (used for output filenames)
 def_session_name = "PSD_"+time.strftime("%Y%m%d_%Hh%Mm%Ss")
@@ -203,8 +217,9 @@ class coffeegrindsize_GUI:
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
 		
-		choices = ["Number vs Diameter", "Number vs Surface", "Mass vs Diameter", "Mass vs Surface", "Extract vs Diameter", "Extract vs Surface", "Surface vs Diameter", "Surface vs Surface", "Extraction Yield Distribution"]
-		self.histogram_type = self.dropdown_entry("Histogram Options:", choices, self.change_histogram_type)
+		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Mass vs Diameter", "Mass vs Surface", "Extract vs Diameter", "Extract vs Surface", "Surface vs Diameter", "Surface vs Surface", "Extraction Yield Distribution"]
+		self.hist_codes = ["num_diam", "num_surf", "mass_diam", "mass_surf", "bev_diam", "bev_surf", "surf_diam", "surf_surf", "ey"]
+		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
 		
 		#X axis range for the histogram figure
 		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
@@ -250,15 +265,15 @@ class coffeegrindsize_GUI:
 		self.previous_display_type = choices[0]
 		
 		#Button to zoom in
-		zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
-		zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
+		self.zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
+		self.zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
 		
-		zoom_out_button = Button(self.frame_options, text="Zoom Out", command=self.zoom_out_button)
-		zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
+		self.zoom_out_button = Button(self.frame_options, text="Zoom Out", command=self.zoom_out_button)
+		self.zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
 		
 		#Button for resetting zoom in the displayed image
-		reset_zoom_button = Button(self.frame_options, text="Reset Zoom", command=self.reset_zoom)
-		reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
+		self.reset_zoom_button = Button(self.frame_options, text="Reset Zoom", command=self.reset_zoom)
+		self.reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
 		self.options_row += 1
 		
 		#Add a few horizontal spaces
@@ -296,7 +311,7 @@ class coffeegrindsize_GUI:
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select a reference object
-		ref_obj_button = Button(toolbar, text="Select Referece Object...", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
+		ref_obj_button = Button(toolbar, text="Select Reference Object...", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
 		ref_obj_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select region containing the coffee grounds
@@ -311,13 +326,17 @@ class coffeegrindsize_GUI:
 		psd_button = Button(toolbar, text="Launch Particle Detection Analysis...", command=self.launch_psd,highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
+		#Button to output data to the disk
+		save_button = Button(toolbar, text="Save Data...", command=self.save_data, highlightbackground=toolbar_bg)
+		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
 		#Button to display histogram figures
 		histogram_button = Button(toolbar, text="Create Histogram Figure...", command=self.create_histogram, highlightbackground=toolbar_bg)
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
-		#Button to output data to the disk
-		save_button = Button(toolbar, text="Save Data...", command=self.save_data, highlightbackground=toolbar_bg)
-		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		#Button to save histogram to disk
+		savehist_button = Button(toolbar, text="Save Histogram...", command=self.save_histogram, highlightbackground=toolbar_bg)
+		savehist_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
 		quit_button = Button(toolbar, text="Quit", command=self.quit_gui, highlightbackground=toolbar_bg)
@@ -580,6 +599,17 @@ class coffeegrindsize_GUI:
 				#Return to caller
 				return
 		
+		#If we are moving out from histogram display
+		else:
+			if self.previous_display_type == histogram_image_display_name:
+				#Set scale to original scale
+				self.scale = self.original_scale
+				
+				#Reactivate zoom buttons
+				self.zoom_in_button.config(state=NORMAL)
+				self.zoom_out_button.config(state=NORMAL)
+				self.reset_zoom_button.config(state=NORMAL)
+		
 		#Redraw the selected image
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
@@ -692,8 +722,33 @@ class coffeegrindsize_GUI:
 				self.img = self.img_threshold
 			if self.display_type.get() == outlines_image_display_name:
 				self.img = self.img_clusters
+			
+			#The case of a histogram is a bit special
 			if self.display_type.get() == histogram_image_display_name:
+				
+				#Place histogram in image buffer
 				self.img = self.img_histogram
+				
+				#Delete all polygons
+				self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+				
+				#Reset the effect of dragging
+				self.image_canvas.xview_moveto(0)
+				self.image_canvas.yview_moveto(0)
+				
+				#Remember this new position
+				self.last_image_x = self.canvas_width/2
+				self.last_image_y = self.canvas_height/2
+				x = self.canvas_width/2
+				y = self.canvas_height/2
+				
+				#Set scale to unity
+				self.scale = 1
+				
+				#Deactivate zoom buttons
+				self.zoom_in_button.config(state=DISABLED)
+				self.zoom_out_button.config(state=DISABLED)
+				self.reset_zoom_button.config(state=DISABLED)
 			
 			#Determine the size of the image to be drawn and scale it appropriately
 			iw, ih = self.img.size
@@ -743,6 +798,13 @@ class coffeegrindsize_GUI:
 	#Method to set the starting point of a drag
 	def move_start(self, event):
 		
+		#Set focus on image canvas to avoid writing in Entries
+		self.image_canvas.focus_set()
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
+		
 		#In normal mode, set start of motion
 		if self.mouse_click_mode is None:
 			self.image_canvas.scan_mark(event.x, event.y)
@@ -761,6 +823,10 @@ class coffeegrindsize_GUI:
 		
 		#In Select Reference Object mode, set start of line
 		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT_READY":
+			
+			#In histogram mode, do nothing
+			if self.display_type.get() == histogram_image_display_name:
+				return
 			
 			#Set the starting point for the red line
 			self.line_start(event)
@@ -807,16 +873,32 @@ class coffeegrindsize_GUI:
 	
 	#Method to execute the move of a drag
 	def move_move(self, event):
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
+		
+		#Otherwise, drag image
 		if self.mouse_click_mode is None:
 			self.image_canvas.scan_dragto(event.x, event.y, gain=1)
 	
 	#Method to set the starting point of a line
 	def line_start(self, event):
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
+		
+		#Otherwise, remember start position for line
 		self.linex_start = event.x + self.image_canvas.canvasx(0)
 		self.liney_start = event.y + self.image_canvas.canvasy(0)
 		
 	#Method to draw the line
 	def line_move(self, event):
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
 		
 		#Destroy any existing line
 		if self.line_obj is not None:
@@ -844,6 +926,10 @@ class coffeegrindsize_GUI:
 	
 	#Method to track the mouse position
 	def motion(self, event):
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
 		
 		#Update the current mouse position
 		self.mouse_x, self.mouse_y = event.x, event.y
@@ -915,11 +1001,19 @@ class coffeegrindsize_GUI:
 	#Method to apply a zoom in
 	def zoom_in(self, event):
 		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
+		
 		#Apply zoom in the positive direction
 		self.zoom(event, 1)
 		
 	#Method to apply a zoom in
 	def zoom_out(self, event):
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
 		
 		#Apply zoom in the positive direction
 		self.zoom(event, -1)
@@ -992,18 +1086,26 @@ class coffeegrindsize_GUI:
 	#Method to reset status
 	def reset_status(self):
 		
-		#Update the user interface status
-		self.status_var.set("Parameters Reset to Defaults...")
-		
 		#Reset all options to their default values
 		self.threshold_var.set(str(def_threshold))
-		self.pixel_scale_var.set(str(def_pixel_scale))
 		self.max_cluster_axis_var.set(str(def_max_cluster_axis))
 		self.min_surface_var.set(str(def_min_surface))
 		self.min_roundness_var.set(str(def_min_roundness))
+		self.quick_var.set(0)
+		self.histogram_type.set(self.hist_choices[0])
 		self.xmin_var.set(str(def_min_x_axis))
 		self.xmax_var.set(str(def_max_x_axis))
+		self.xlog_var.set(1)
+		self.output_dir = def_output_dir
+		self.output_dir_var.set(self.output_dir)
 		self.session_name_var.set(str(def_session_name))
+		self.display_type.set(original_image_display_name)
+		
+		#Reset zoom to center the image properly
+		self.reset_zoom()
+		
+		#Update the user interface status
+		self.status_var.set("Parameters Reset to Defaults...")
 		
 		#Update the user interface
 		self.master.update()
@@ -1399,8 +1501,15 @@ class coffeegrindsize_GUI:
 			if roundness < min_roundness_var:
 				continue
 			
+			#Calculate shortest axis of the particle
+			short_axis = surface/(np.pi*axis)
+			
+			#Suppose that the hidden axis is equal to the short axis and calculate volume
+			#Here we also approximate the coffee particle as an ellipsoid
+			volume = np.pi*short_axis**2*axis
+			
 			#Create a structure with the cluster information
-			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist, "YLIST":ylist, "AXIS":axis, "ROUNDNESS":roundness, "XMEAN":xmean, "YMEAN":ymean, "XSTART":self.mask_threshold[0][icurrent], "YSTART":self.mask_threshold[1][icurrent], "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
+			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist, "YLIST":ylist, "LONG_AXIS":axis, "ROUNDNESS":roundness, "VOLUME":volume, "SHORT_AXIS":short_axis, "XMEAN":xmean, "YMEAN":ymean, "XSTART":self.mask_threshold[0][icurrent], "YSTART":self.mask_threshold[1][icurrent], "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
 			
 			#Append cluser data with this dictionary
 			self.cluster_data.append(clusteri_data)
@@ -1408,12 +1517,16 @@ class coffeegrindsize_GUI:
 		#Read useful cluster data
 		self.nclusters = len(self.cluster_data)
 		self.clusters_surface = np.full(self.nclusters, np.nan)
-		self.clusters_axis = np.full(self.nclusters, np.nan)
+		self.clusters_long_axis = np.full(self.nclusters, np.nan)
 		self.clusters_roundness = np.full(self.nclusters, np.nan)
+		self.clusters_short_axis = np.full(self.nclusters, np.nan)
+		self.clusters_volume = np.full(self.nclusters, np.nan)
 		for i in range(self.nclusters):
 			self.clusters_surface[i] = self.cluster_data[i]["SURFACE"]
-			self.clusters_axis[i] = self.cluster_data[i]["AXIS"]
+			self.clusters_long_axis[i] = self.cluster_data[i]["LONG_AXIS"]
 			self.clusters_roundness[i] = self.cluster_data[i]["ROUNDNESS"]
+			self.clusters_short_axis[i] = self.cluster_data[i]["SHORT_AXIS"]
+			self.clusters_volume[i] = self.cluster_data[i]["VOLUME"]
 		
 		#Set the status to completed
 		self.status_var.set("Particle Detection Analysis Done ! Creating Cluster Map Image...")
@@ -1570,6 +1683,234 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
+		#Read pixel scale from internal variables
+		pixel_scale = float(self.pixel_scale_var.get())
+		
+		#Initiate empty data
+		data = None
+		xlabel = None
+		
+		# === Define X axis as required ===
+		
+		#If X data is diameter
+		if "vs Diameter" in self.histogram_type.get():
+			data = 2*np.sqrt(self.clusters_long_axis*self.clusters_short_axis)/pixel_scale
+			xlabel = "Particle Diameter (mm)"
+		
+		#If X data is surface
+		if "vs Surface" in self.histogram_type.get():
+			data = self.clusters_surface/pixel_scale**2
+			xlabel = "Particle Surface (mm$^2$)"
+		
+		#If X data is volume
+		if "vs Volume" in self.histogram_type.get():
+			data = self.clusters_volume/pixel_scale**3
+			xlabel = "Particle Volume (mm$^3$)"
+		
+		if "Extraction Yield Distribution" in self.histogram_type.get():
+			#Not coded yet
+			#Create a subroutine that computes the extraction Yield
+			xlabel = "Extraction Yield (%)"
+			stop()
+		
+		#If data is still empty then the selection was not recognized
+		if data is None:
+			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		# === Select appropriate weights and normalization ===
+		
+		#Initiate empty data
+		data_weights = None
+		density = False
+		ylabel = None
+		
+		#If Y data is the number of particles
+		if "Number vs" in self.histogram_type.get():
+			data_weights = np.full(self.nclusters, 1)
+			density = False
+			ylabel = "Number of Particles"
+		
+		#If Y data is the surface
+		if "Surface vs" in self.histogram_type.get():
+			data_weights = self.clusters_surface
+			density = True
+			ylabel = "Total Particle Surface Fraction"
+			
+		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
+		if "Mass vs" in self.histogram_type.get():
+			data_weights = self.clusters_volume
+			ylabel = "Total Particle Mass Fraction"
+			density = True
+			
+		if "Extract vs" in self.histogram_type.get():
+			stop()#Not coded yet
+			density = True
+			ylabel = "Beverage Mass Fraction"
+		
+		#If weights are still empty then the selection was not recognized
+		if data_weights is None:
+			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		#Read x range from internal variables
+		xmin = float(self.xmin_var.get())
+		xmax = float(self.xmax_var.get())
+		histrange = np.array([xmin, xmax])
+		
+		#Set x axis in log units if required
+		if self.xlog_var.get() == 1:
+			binsize = 0.2
+			data = np.log10(data)
+		else:
+			binsize = 0.1
+		
+		#Count the number of bins that are required
+		nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(binsize) ))
+		
+		#Create a list of bins for plotting
+		if self.xlog_var.get() == 1:
+			bins_input = np.logspace(np.log10(histrange[0]), np.log10(histrange[1]), nbins)
+		else:
+			bins_input = np.linspace(histrange[0], histrange[1], nbins)
+		
+		#Size of figure in pixels
+		figsize_pix = (self.canvas_width, self.canvas_height)
+		
+		#Transform these in pixels with the default DPI value
+		my_dpi = 192
+		figsize_inches = (figsize_pix[0]/my_dpi, figsize_pix[1]/my_dpi)
+		
+		#Prepare a figure to display the plot
+		fig = plt.figure(figsize=figsize_inches, dpi=my_dpi)
+		
+		#counts, bin_edges, ignored = plt.hist( samples, bins_log10, histtype='stepfilled', label='histogram' )
+		
+		#Plot the histogram
+		hist_color = [147,36,30]
+		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
+		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label="New Data", weights=data_weights, normed=density, lw=2, rwidth=.8)
+		
+		#Make xlog if needed
+		if self.xlog_var.get() == 1:
+			plt.xscale("log")
+		
+		#Set X and Y labels
+		plt.xlabel(xlabel, fontsize=16)
+		plt.ylabel(ylabel, fontsize=16)
+		
+		# Change size and font of tick labels
+		tick_fontsize = 14
+		ax = gca()
+
+		for tick in ax.xaxis.get_major_ticks():
+			tick.label1.set_fontsize(tick_fontsize)
+			#tick.label1.set_fontweight('bold')
+		for tick in ax.yaxis.get_major_ticks():
+			tick.label1.set_fontsize(tick_fontsize)
+			#tick.label1.set_fontweight('bold')
+		
+		#Get the locations and labels of the X ticks
+		#locs, labels = plt.xticks()
+		
+		#Set the labels to their linear values
+		#labels = ["{0:.{1}f}".format(10.0**float(item), 1) for item in locs]
+		#plt.xticks(locs, labels)
+		
+		#Use a tight layout
+		plt.tight_layout()
+		
+		#plt.savefig("/Users/gagne/test.png")
+		#stop()
+		
+		# #Keep track of PDF X axis in non log units
+		# if self.xlog_var.get() == 1:
+		# 	xpdf_linear = 10.0**(xpdf)
+		# else:
+		# 	xpdf_linear = np.copy(xpdf)
+		
+		# # === Interpret PDF X axis in linear radii ===
+		
+		# #Initiate empty data
+		# xpdf_linear_radii = None
+		
+		# #If X data is diameter
+		# if "vs Diameter" in self.histogram_type.get():
+		# 	xpdf_linear_radii = xpdf_linear/2.0
+		
+		# #If X data is surface
+		# if "vs Surface" in self.histogram_type.get():
+		# 	xpdf_linear_radii = np.sqrt(xpdf_linear/np.pi)
+		
+		# #If X data is volume
+		# if "vs Volume" in self.histogram_type.get():
+		# 	xpdf_linear_radii = (3/4*xpdf_linear/np.pi)**(1/3)
+		
+		# #If extraction yields are computed then Y axis will require no transformation
+		# if "Extraction Yield Distribution" in self.histogram_type.get():
+		# 	xpdf_linear_radii = 0
+		
+		# #If data is still empty then the selection was not recognized
+		# if xpdf_linear_radii is None:
+		# 	raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		# # === Apply required transformations to the probability distribution function ===
+		
+		# #Initiate empty Y data
+		# ydata = None
+		
+		# #If Y data is the number of particles
+		# if "Number vs" in self.histogram_type.get():
+		# 	ydata = ypdf
+		
+		# #If Y data is the surface
+		# if "Surface vs" in self.histogram_type.get():
+		# 	ydata = ypdf*xpdf_linear_radii**2
+			
+		# #If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
+		# if "Mass vs" in self.histogram_type.get():
+		# 	ydata = ypdf*xpdf_linear_radii**3
+			
+		# if "Extract vs" in self.histogram_type.get():
+		# 	stop()#Not coded yet
+		
+		# #If extraction yields are computed then Y axis will require no transformation
+		# if "Extraction Yield Distribution" in self.histogram_type.get():
+		# 	ydata = 0
+		
+		# #If ydata is still empty then the selection was not recognized
+		# if ydata is None:
+		# 	raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		# #Normalize y data
+		# ydata /= np.nansum(ydata)
+		
+		
+		# === Transform the figure to a PIL object ===
+		
+		#Draw the figure in the buffer
+		fig.canvas.draw()
+		
+		#Tranform the figure in a numpy array
+		figdata = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+		figdata = figdata.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+		
+		#Read the shape of the numpy array
+		fw, fh, fd = figdata.shape
+		
+		#Transform numpy array in a PIL image
+		self.img_histogram = Image.frombytes("RGB", (fh, fw), figdata)
+		
+		#Set the cluster map image as the currently plotted object
+		self.display_type.set(histogram_image_display_name)
+		self.img = self.img_histogram
+		
+		#Refresh the image that is displayed
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
+		#Refresh the user interface status
+		self.status_var.set("Histogram Image is Now Displayed...")
+		
+		#Refresh the state of the user interface window
+		self.master.update()
 	
 	#Method to save data to disk
 	def save_data(self):
@@ -1587,15 +1928,47 @@ class coffeegrindsize_GUI:
 			return
 		
 		#Create a Pandas dataframe for easier saving
-		dataframe = pd.DataFrame({"AXIS":self.clusters_axis,"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness})
+		dataframe = pd.DataFrame({"AXIS":self.clusters_axis,"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume})
 		dataframe.index.name = "ID"
 		
 		#Save file to CSV
 		filename = self.session_name_var.get()+"_data.csv"
-		dataframe.to_csv(self.output_dir+os.sep+filename)
+		full_filename = self.output_dir+os.sep+filename
+		dataframe.to_csv(full_filename)
 		
 		#Update the user interface status
 		self.status_var.set("Data Saved to "+filename+"...")
+		
+		#Update the user interface
+		self.master.update()
+	
+	#Method to save figure to disk
+	def save_histogram(self):
+		
+		#Verify that a figure exists
+		if self.img_histogram is None:
+			
+			#Update the user interface status
+			self.status_var.set("No Histogram Created Yet... Use Create Histogram Button...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
+		#Determine filename code for this type of histogram
+		ihist = np.where(np.array(self.hist_choices) == self.histogram_type.get())
+		hist_code = self.hist_codes[ihist[0][0]]
+		
+		#Save file to PNG
+		filename = self.session_name_var.get()+"_hist_"+hist_code+".png"
+		full_filename = self.output_dir+os.sep+filename
+		
+		self.img_histogram.save(full_filename)
+		
+		#Update the user interface status
+		self.status_var.set("Histogram Saved to "+filename+"...")
 		
 		#Update the user interface
 		self.master.update()
