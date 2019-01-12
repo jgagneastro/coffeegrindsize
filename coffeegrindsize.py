@@ -1427,7 +1427,6 @@ class coffeegrindsize_GUI:
 				
 				#Check that the current pixel was found only once
 				if icurrent_in_clust[0].size != 1:
-					stop()
 					raise ValueError("The starting pixel was not found in a cluster. This should never happen !")
 				
 				#Create a cost function along the positions of this cluster for pixel rejection
@@ -1451,7 +1450,6 @@ class coffeegrindsize_GUI:
 					
 					#There should be at least one dark pixel
 					if idark.size == 0:
-						stop()
 						raise ValueError("There should be at least one dark pixel in the cluster, this should never happen !")
 					
 					#Pick the nearest reference dark pixel
@@ -1752,7 +1750,14 @@ class coffeegrindsize_GUI:
 			#Not coded yet
 			#Create a subroutine that computes the extraction Yield
 			xlabel = "Extraction Yield (%)"
-			stop()
+			
+			#Refresh the user interface status
+			self.status_var.set("This option has not been coded yet...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+			
+			return
 		
 		#If data is still empty then the selection was not recognized
 		if data is None:
@@ -1784,9 +1789,16 @@ class coffeegrindsize_GUI:
 			density = True
 			
 		if "Extract vs" in self.histogram_type.get():
-			stop()#Not coded yet
 			density = True
 			ylabel = "Beverage Mass Fraction"
+			
+			#Refresh the user interface status
+			self.status_var.set("This option has not been coded yet...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+			
+			return
 		
 		#If weights are still empty then the selection was not recognized
 		if data_weights is None:
@@ -1844,86 +1856,11 @@ class coffeegrindsize_GUI:
 
 		for tick in ax.xaxis.get_major_ticks():
 			tick.label1.set_fontsize(tick_fontsize)
-			#tick.label1.set_fontweight('bold')
 		for tick in ax.yaxis.get_major_ticks():
 			tick.label1.set_fontsize(tick_fontsize)
-			#tick.label1.set_fontweight('bold')
-		
-		#Get the locations and labels of the X ticks
-		#locs, labels = plt.xticks()
-		
-		#Set the labels to their linear values
-		#labels = ["{0:.{1}f}".format(10.0**float(item), 1) for item in locs]
-		#plt.xticks(locs, labels)
 		
 		#Use a tight layout
 		plt.tight_layout()
-		
-		#plt.savefig("/Users/gagne/test.png")
-		#stop()
-		
-		# #Keep track of PDF X axis in non log units
-		# if self.xlog_var.get() == 1:
-		# 	xpdf_linear = 10.0**(xpdf)
-		# else:
-		# 	xpdf_linear = np.copy(xpdf)
-		
-		# # === Interpret PDF X axis in linear radii ===
-		
-		# #Initiate empty data
-		# xpdf_linear_radii = None
-		
-		# #If X data is diameter
-		# if "vs Diameter" in self.histogram_type.get():
-		# 	xpdf_linear_radii = xpdf_linear/2.0
-		
-		# #If X data is surface
-		# if "vs Surface" in self.histogram_type.get():
-		# 	xpdf_linear_radii = np.sqrt(xpdf_linear/np.pi)
-		
-		# #If X data is volume
-		# if "vs Volume" in self.histogram_type.get():
-		# 	xpdf_linear_radii = (3/4*xpdf_linear/np.pi)**(1/3)
-		
-		# #If extraction yields are computed then Y axis will require no transformation
-		# if "Extraction Yield Distribution" in self.histogram_type.get():
-		# 	xpdf_linear_radii = 0
-		
-		# #If data is still empty then the selection was not recognized
-		# if xpdf_linear_radii is None:
-		# 	raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
-		
-		# # === Apply required transformations to the probability distribution function ===
-		
-		# #Initiate empty Y data
-		# ydata = None
-		
-		# #If Y data is the number of particles
-		# if "Number vs" in self.histogram_type.get():
-		# 	ydata = ypdf
-		
-		# #If Y data is the surface
-		# if "Surface vs" in self.histogram_type.get():
-		# 	ydata = ypdf*xpdf_linear_radii**2
-			
-		# #If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
-		# if "Mass vs" in self.histogram_type.get():
-		# 	ydata = ypdf*xpdf_linear_radii**3
-			
-		# if "Extract vs" in self.histogram_type.get():
-		# 	stop()#Not coded yet
-		
-		# #If extraction yields are computed then Y axis will require no transformation
-		# if "Extraction Yield Distribution" in self.histogram_type.get():
-		# 	ydata = 0
-		
-		# #If ydata is still empty then the selection was not recognized
-		# if ydata is None:
-		# 	raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
-		
-		# #Normalize y data
-		# ydata /= np.nansum(ydata)
-		
 		
 		# === Transform the figure to a PIL object ===
 		
