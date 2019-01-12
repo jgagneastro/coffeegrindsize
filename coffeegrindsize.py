@@ -392,6 +392,10 @@ class coffeegrindsize_GUI:
 		subMenu.add_command(label="Open Image...", command=self.open_image)
 		subMenu.add_separator()
 		
+		#Add an option to downsample images
+		subMenu.add_command(label="Downsample Image...", command=self.downsample_image)
+		subMenu.add_separator()
+		
 		#Add an option for debugging
 		subMenu.add_command(label="Python Debugger...", command=self.pdb_call)
 		subMenu.add_separator()
@@ -1223,6 +1227,32 @@ class coffeegrindsize_GUI:
 		#Update root to avoid problems with file dialog
 		self.master.update()
 	
+	#Method to downsample an image
+	def downsample_image(self):
+		
+		#Verify that an image was loaded
+		if self.img_source is None:
+				
+				#Update the user interface status
+				self.status_var.set("Original Image not Loaded Yet... Use Open Image Button...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
+		
+		#Zoom in
+		self.scale *= 2
+		self.original_scale *= 2
+		
+		#Resize image
+		self.img_source = self.img_source.resize((int(float(self.img.size[0])/2),int(float(self.img.size[1])/2)), Image.ANTIALIAS)
+		self.img = self.img_source
+		
+		#Redraw the image
+		self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
 	#Method to open an image from the disk
 	def open_image(self):
 		
