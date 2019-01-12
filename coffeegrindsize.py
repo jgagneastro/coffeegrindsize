@@ -507,7 +507,7 @@ class coffeegrindsize_GUI:
 				return
 		
 		#Delete all currently drawn lines
-		self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+		self.image_canvas.delete(self.image_canvas.find_withtag("line"))
 		
 		#Reset the region if it exists
 		self.polygon_alpha = None
@@ -544,7 +544,7 @@ class coffeegrindsize_GUI:
 			if self.polygon_alpha.size < 3:
 				
 				#Delete all currently drawn lines
-				self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+				self.image_canvas.delete(self.image_canvas.find_withtag("line"))
 				
 				#Reset the polygon region
 				self.polygon_alpha = None
@@ -688,7 +688,9 @@ class coffeegrindsize_GUI:
 		if self.display_type.get() == histogram_image_display_name:
 			
 			#Delete all polygons
-			self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+			self.image_canvas.delete(self.image_canvas.find_withtag("line"))
+			self.polygon_alpha = None
+			self.polygon_beta = None
 			
 			#Reset the effect of dragging
 			self.image_canvas.xview_moveto(0)
@@ -816,7 +818,7 @@ class coffeegrindsize_GUI:
 	def redraw(self, x=0, y=0):
 			
 			#Delete all currently drawn lines
-			self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+			self.image_canvas.delete(self.image_canvas.find_withtag("line"))
 			
 			#Delete currently drawn image if there is one
 			if self.image_id:
@@ -836,26 +838,11 @@ class coffeegrindsize_GUI:
 				#Place histogram in image buffer
 				self.img = self.img_histogram
 				
-				# #Delete all polygons
-				# self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+				#Delete all currently drawn lines
 				
-				# #Reset the effect of dragging
-				# self.image_canvas.xview_moveto(0)
-				# self.image_canvas.yview_moveto(0)
-				
-				# #Remember this new position
-				# self.last_image_x = self.canvas_width/2
-				# self.last_image_y = self.canvas_height/2
-				# x = self.canvas_width/2
-				# y = self.canvas_height/2
-				
-				# #Set scale to unity
-				# self.scale = 1
-				
-				# #Deactivate zoom buttons
-				# self.zoom_in_button.config(state=DISABLED)
-				# self.zoom_out_button.config(state=DISABLED)
-				# self.reset_zoom_button.config(state=DISABLED)
+				#Reset the region if it exists
+				self.polygon_alpha = None
+				self.polygon_beta = None
 			
 			#Determine the size of the image to be drawn and scale it appropriately
 			iw, ih = self.img.size
@@ -1240,7 +1227,7 @@ class coffeegrindsize_GUI:
 	def open_image(self):
 		
 		#Delete all currently drawn lines
-		self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+		self.image_canvas.delete(self.image_canvas.find_withtag("line"))
 		
 		#Reset the region if it exists
 		self.polygon_alpha = None
@@ -1900,7 +1887,6 @@ class coffeegrindsize_GUI:
 			bins_input = np.logspace(np.log10(histrange[0]), np.log10(histrange[1]), nbins)
 		else:
 			bins_input = np.linspace(histrange[0], histrange[1], nbins)
-		stop()
 		
 		#Size of figure in pixels
 		figsize_pix = (self.canvas_width, self.canvas_height)
@@ -1927,22 +1913,20 @@ class coffeegrindsize_GUI:
 		
 		# Change size and font of tick labels
 		#tick_fontsize = 14
-		#ax = gca()
+		ax = plt.gca()
 		#for tick in ax.xaxis.get_major_ticks():
 		#	tick.label1.set_fontsize(tick_fontsize)
 		#for tick in ax.yaxis.get_major_ticks():
 		#	tick.label1.set_fontsize(tick_fontsize)
 		
-		#In xlog mode do not use scientific notation
-		if self.xlog_var.get() == 1:
-			ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
-			ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
-		
 		#Set the label fonts
-		minortick_fontsize = 6
-		majortick_fontsize = 14
+		minortick_fontsize = 5
+		majortick_fontsize = 8
 		plt.tick_params(axis='both', which='major', labelsize=majortick_fontsize)
-		plt.tick_params(axis='both', which='minor', labelrotation=90, labelsize=minortick_fontsize)
+		
+		if self.xlog_var.get() == 1:
+			plt.tick_params(axis='x', which='major', labelrotation=90, pad=8)
+			plt.tick_params(axis='x', which='minor', labelrotation=90, labelsize=minortick_fontsize)
 		
 		#Make ticks longer and thicker
 		ax.tick_params(axis="both", length=5, width=2, which="major")
@@ -1950,6 +1934,11 @@ class coffeegrindsize_GUI:
 		
 		#Use a tight layout
 		plt.tight_layout()
+		
+		#In xlog mode do not use scientific notation
+		if self.xlog_var.get() == 1:
+			ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+			ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
 		
 		# === Transform the figure to a PIL object ===
 		
@@ -1995,7 +1984,7 @@ class coffeegrindsize_GUI:
 			return
 		
 		#Create a Pandas dataframe for easier saving
-		dataframe = pd.DataFrame({"AXIS":self.clusters_axis,"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume})
+		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume})
 		dataframe.index.name = "ID"
 		
 		#Save file to CSV
