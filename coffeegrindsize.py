@@ -69,6 +69,13 @@ reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dol
 #Default output directory
 def_output_dir = os.path.expanduser("~")
 
+#Python class for comparison data
+class Comparison:
+	def __init__(self, **kwds):
+		
+		#This variable will add some required dictionary values
+		self.__dict__.update(kwds)
+
 #Python class for the user interface window
 class coffeegrindsize_GUI:
 	
@@ -85,6 +92,7 @@ class coffeegrindsize_GUI:
 		
 		#This variable will keep track of the number of detected clusters
 		self.nclusters = None
+		self.comparison = Comparison(nclusters=None)
 		
 		#Keep track of the mouse click mode
 		self.mouse_click_mode = None
@@ -236,6 +244,12 @@ class coffeegrindsize_GUI:
 		#Label for the data
 		self.data_label_var, self.data_label_id = self.label_entry("Current Data", "Data Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
 		
+		#Label for the comparison data
+		self.comparison_data_label_var, self.comparison_data_label_id = self.label_entry("Comparison Data", "Comparison Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
+		
+		#Deactivate by default
+		self.comparison_data_label_id.config(state=DISABLED)
+		
 		#Whether the X axis of the histogram should be set manually
 		#This is a checkbox
 		self.xaxis_auto_var = IntVar()
@@ -382,6 +396,10 @@ class coffeegrindsize_GUI:
 		#Button to load comparison data from disk
 		load_comparison_data_button = Button(toolbar2, text="Load Comparison Data", command=self.load_comparison_data, highlightbackground=toolbar_bg)
 		load_comparison_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to flush comparison data
+		flush_comparison_data_button = Button(toolbar2, text="Flush Comparison Data", command=self.flush_comparison_data, highlightbackground=toolbar_bg)
+		flush_comparison_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to output data to the disk
 		save_button = Button(toolbar2, text="Save Data", command=self.save_data, highlightbackground=toolbar_bg)
@@ -1803,7 +1821,127 @@ class coffeegrindsize_GUI:
 			
 		#Return the final list of indices to the caller
 		return iout
+	
+	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar"):
 		
+		#Read pixel scale from internal variables
+		pixel_scale = float(source.pixel_scale_var.get())
+		
+		#Initiate empty data
+		data = None
+		self.xlabel = None
+		
+		#Default label
+		if hist_label is None:
+			hist_label = self.data_label_var.get()
+		
+		# === Define X axis as required ===
+		
+		#If X data is diameter
+		if "vs Diameter" in self.histogram_type.get():
+			data = 2*np.sqrt(source.clusters_long_axis*source.clusters_short_axis)/pixel_scale
+			self.xlabel = "Particle Diameter (mm)"
+		
+		#If X data is surface
+		if "vs Surface" in self.histogram_type.get():
+			data = source.clusters_surface/pixel_scale**2
+			self.xlabel = "Particle Surface (mm$^2$)"
+		
+		#If X data is volume
+		if "vs Volume" in self.histogram_type.get():
+			data = source.clusters_volume/pixel_scale**3
+			self.xlabel = "Particle Volume (mm$^3$)"
+		
+		if "Extraction Yield Distribution" in self.histogram_type.get():
+			#Not coded yet
+			#Create a subroutine that computes the extraction Yield
+			self.xlabel = "Extraction Yield (%)"
+			
+			#Refresh the user interface status
+			self.status_var.set("This option has not been coded yet...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+			
+			return
+		
+		#If data is still empty then the selection was not recognized
+		if data is None:
+			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		#Initiate empty data
+		data_weights = None
+		density = False
+		self.ylabel = None
+		
+		#If Y data is the number of particles
+		if "Number vs" in self.histogram_type.get():
+			data_weights = np.full(source.nclusters, 1)
+			density = False
+			self.ylabel = "Number of Particles"
+		
+		#If Y data is the surface
+		if "Surface vs" in self.histogram_type.get():
+			data_weights = source.clusters_surface
+			density = True
+			self.ylabel = "Total Particle Surface Fraction"
+			
+		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
+		if "Mass vs" in self.histogram_type.get():
+			data_weights = source.clusters_volume
+			self.ylabel = "Total Particle Mass Fraction"
+			density = True
+			
+		if "Extract vs" in self.histogram_type.get():
+			density = True
+			self.ylabel = "Beverage Mass Fraction"
+			
+			#Refresh the user interface status
+			self.status_var.set("This option has not been coded yet...")
+			
+			#Refresh the state of the user interface window
+			self.master.update()
+			
+			return
+		
+		#If weights are still empty then the selection was not recognized
+		if data_weights is None:
+			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
+		
+		#Read x range from internal variables
+		if self.xaxis_auto_var.get() == 1:
+			xmin = np.nanmin(data)
+			xmax = np.nanmax(data)
+		else:
+			xmin = float(self.xmin_var.get())
+			xmax = float(self.xmax_var.get())
+		
+		#Set histogram range
+		histrange = np.array([xmin, xmax])
+		
+		if bins_input is None:
+			#Read number of bins from internal variables
+			if self.nbins_auto_var.get() == 1:
+				#Count the number of bins that are required
+				if self.xlog_var.get() == 1:
+					nbins = int(np.ceil( np.log10(float(histrange[1]) - np.log10(histrange[0]))/float(default_log_binsize) ))
+				else:
+					nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize) ))
+			else:
+				nbins = int(np.round(float(self.nbins_var.get())))
+			
+			#Create a list of bins for plotting
+			if self.xlog_var.get() == 1:
+				bins_input = np.logspace(np.log10(histrange[0]), np.log10(histrange[1]), nbins)
+			else:
+				bins_input = np.linspace(histrange[0], histrange[1], nbins)
+		
+		#Plot the histogram
+		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
+		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights, density=density, lw=2, rwidth=.8)
+		
+		return bins_input
+	
 	#Method to create histogram
 	def create_histogram(self, event):
 		
@@ -1831,115 +1969,6 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
-		#Read pixel scale from internal variables
-		pixel_scale = float(self.pixel_scale_var.get())
-		
-		#Initiate empty data
-		data = None
-		xlabel = None
-		
-		# === Define X axis as required ===
-		
-		#If X data is diameter
-		if "vs Diameter" in self.histogram_type.get():
-			data = 2*np.sqrt(self.clusters_long_axis*self.clusters_short_axis)/pixel_scale
-			xlabel = "Particle Diameter (mm)"
-		
-		#If X data is surface
-		if "vs Surface" in self.histogram_type.get():
-			data = self.clusters_surface/pixel_scale**2
-			xlabel = "Particle Surface (mm$^2$)"
-		
-		#If X data is volume
-		if "vs Volume" in self.histogram_type.get():
-			data = self.clusters_volume/pixel_scale**3
-			xlabel = "Particle Volume (mm$^3$)"
-		
-		if "Extraction Yield Distribution" in self.histogram_type.get():
-			#Not coded yet
-			#Create a subroutine that computes the extraction Yield
-			xlabel = "Extraction Yield (%)"
-			
-			#Refresh the user interface status
-			self.status_var.set("This option has not been coded yet...")
-			
-			#Refresh the state of the user interface window
-			self.master.update()
-			
-			return
-		
-		#If data is still empty then the selection was not recognized
-		if data is None:
-			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
-		
-		# === Select appropriate weights and normalization ===
-		
-		#Initiate empty data
-		data_weights = None
-		density = False
-		ylabel = None
-		
-		#If Y data is the number of particles
-		if "Number vs" in self.histogram_type.get():
-			data_weights = np.full(self.nclusters, 1)
-			density = False
-			ylabel = "Number of Particles"
-		
-		#If Y data is the surface
-		if "Surface vs" in self.histogram_type.get():
-			data_weights = self.clusters_surface
-			density = True
-			ylabel = "Total Particle Surface Fraction"
-			
-		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
-		if "Mass vs" in self.histogram_type.get():
-			data_weights = self.clusters_volume
-			ylabel = "Total Particle Mass Fraction"
-			density = True
-			
-		if "Extract vs" in self.histogram_type.get():
-			density = True
-			ylabel = "Beverage Mass Fraction"
-			
-			#Refresh the user interface status
-			self.status_var.set("This option has not been coded yet...")
-			
-			#Refresh the state of the user interface window
-			self.master.update()
-			
-			return
-		
-		#If weights are still empty then the selection was not recognized
-		if data_weights is None:
-			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
-		
-		#Read x range from internal variables
-		if self.xaxis_auto_var.get() == 1:
-			xmin = np.nanmin(data)
-			xmax = np.nanmax(data)
-		else:
-			xmin = float(self.xmin_var.get())
-			xmax = float(self.xmax_var.get())
-		
-		#Set histogram range
-		histrange = np.array([xmin, xmax])
-		
-		#Read number of bins from internal variables
-		if self.nbins_auto_var.get() == 1:
-			#Count the number of bins that are required
-			if self.xlog_var.get() == 1:
-				nbins = int(np.ceil( np.log10(float(histrange[1]) - np.log10(histrange[0]))/float(default_log_binsize) ))
-			else:
-				nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize) ))
-		else:
-			nbins = int(np.round(float(self.nbins_var.get())))
-		
-		#Create a list of bins for plotting
-		if self.xlog_var.get() == 1:
-			bins_input = np.logspace(np.log10(histrange[0]), np.log10(histrange[1]), nbins)
-		else:
-			bins_input = np.linspace(histrange[0], histrange[1], nbins)
-		
 		#Size of figure in pixels
 		figsize_pix = (self.canvas_width, self.canvas_height)
 		
@@ -1950,19 +1979,28 @@ class coffeegrindsize_GUI:
 		#Prepare a figure to display the plot
 		fig = plt.figure(figsize=figsize_inches, dpi=my_dpi)
 		
-		#Plot the histogram
-		hist_color = [147,36,30]
-		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
-		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label=self.data_label_var.get(), weights=data_weights, density=density, lw=2, rwidth=.8)
+		# === Generate histogram from data ===
+		
+		bins_input = self.psd_hist_from_data(self)
+		
+		#If comparison data is loaded plot it
+		if self.comparison.nclusters is not None:
+			self.psd_hist_from_data(self.comparison, hist_color=[74, 124, 179], hist_label=self.comparison_data_label_var.get(), bins_input=bins_input, histtype="step")
+		#self.comparison_clusters_surface = dataframe["SURFACE"].values
+		#self.comparison_clusters_roundness = dataframe["ROUNDNESS"].values
+		#self.comparison_clusters_long_axis = dataframe["LONG_AXIS"].values
+		#self.comparison_clusters_short_axis = dataframe["SHORT_AXIS"].values
+		#self.comparison_clusters_volume = dataframe["VOLUME"].values
+		#self.comparison_nclusters = self.comparison_clusters_surface.size
+		#self.comparison_pixel_scale = dataframe["PIXEL_SCALE"].values[0]
 		
 		#Make xlog if needed
 		if self.xlog_var.get() == 1:
 			plt.xscale("log")
 		
 		#Set X and Y labels
-		plt.xlabel(xlabel, fontsize=16)
-		plt.ylabel(ylabel, fontsize=16)
-		
+		plt.xlabel(self.xlabel, fontsize=16)
+		plt.ylabel(self.ylabel, fontsize=16)
 		
 		#Add legend
 		plt.legend()
@@ -2055,7 +2093,7 @@ class coffeegrindsize_GUI:
 		#Refresh histogram
 		self.create_histogram(None)
 		
-	#Method to load data from disk
+	#Method to load comparison data from disk
 	def load_comparison_data(self):
 		
 		#Update root to avoid problems with file dialog
@@ -2068,16 +2106,47 @@ class coffeegrindsize_GUI:
 		dataframe = pd.read_csv(csv_data_filename)
 		
 		#Ingest data in system variables
-		self.comparison_clusters_surface = dataframe["SURFACE"].values
-		self.comparison_clusters_roundness = dataframe["ROUNDNESS"].values
-		self.comparison_clusters_long_axis = dataframe["LONG_AXIS"].values
-		self.comparison_clusters_short_axis = dataframe["SHORT_AXIS"].values
-		self.comparison_clusters_volume = dataframe["VOLUME"].values
-		self.comparison_nclusters = self.comparison_clusters_surface.size
-		self.comparison_pixel_scale_var.set(str(dataframe["PIXEL_SCALE"].values[0]))
+		self.comparison.nclusters = dataframe["SURFACE"].values.size
+		self.comparison.clusters_surface = dataframe["SURFACE"].values
+		self.comparison.clusters_roundness = dataframe["ROUNDNESS"].values
+		self.comparison.clusters_long_axis = dataframe["LONG_AXIS"].values
+		self.comparison.clusters_short_axis = dataframe["SHORT_AXIS"].values
+		self.comparison.clusters_volume = dataframe["VOLUME"].values
+		
+		self.comparison.pixel_scale_var = StringVar()
+		self.comparison.pixel_scale_var.set(str(dataframe["PIXEL_SCALE"].values[0]))
+		
+		#Activate the comparison data label
+		self.comparison_data_label_id.config(state=NORMAL)
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram(None)
 		
 		#Update the user interface status
 		self.status_var.set("Comparison Data Loaded into Memory...")
+	
+	#Method to flush comparison data
+	def flush_comparison_data(self):
+		
+		#Reset system variables
+		self.comparison.clusters_surface = None
+		self.comparison.clusters_roundness = None
+		self.comparison.clusters_long_axis = None
+		self.comparison.clusters_short_axis = None
+		self.comparison.clusters_volume = None
+		self.comparison.nclusters = None
+		self.comparison.pixel_scale_var.set(None)
+		
+		#Deactivate the comparison data label
+		self.comparison_data_label_id.config(state=DISABLED)
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram(None)
+		
+		#Update the user interface status
+		self.status_var.set("Comparison Data Flushed from Memory...")
 		
 	#Method to save data to disk
 	def save_data(self):
