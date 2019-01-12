@@ -12,12 +12,13 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.ticker as mticker
 from matplotlib import path
 
 #Set thick axes
 from matplotlib import rc
-from pylab import gca
 rc("axes", linewidth=2)
+#from pylab import gca
 
 #Set latex fonts
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
@@ -57,6 +58,10 @@ original_image_display_name = "Original"
 threshold_image_display_name = "Thresholded"
 outlines_image_display_name = "Cluster Outlines"
 histogram_image_display_name = "Histograms"
+
+#Default sizes for histogram bins
+default_log_binsize = 0.05
+default_binsize = 0.1
 
 #List of reference objects with their diameters in millimeters
 reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
@@ -225,23 +230,42 @@ class coffeegrindsize_GUI:
 		#This is a checkbox
 		self.xaxis_auto_var = IntVar()
 		self.xaxis_auto_var.set(1)
-		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis", variable=self.xaxis_auto_var)
+		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
 		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
 		
 		self.options_row += 1
 		
 		#X axis range for the histogram figure
-		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
-		self.xmax_var = self.label_entry(def_max_x_axis, "Maximum X Axis:", "")
+		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Minimum X Axis:", "", entry_id=True, event_on_entry="create_histogram")
+		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Maximum X Axis:", "", entry_id=True, event_on_entry="create_histogram")
+		
+		#By default these options are disabled
+		self.xmin_var_id.config(state=DISABLED)
+		self.xmax_var_id.config(state=DISABLED)
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
 		self.xlog_var = IntVar()
 		self.xlog_var.set(1)
-		xlog_checkbox = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=self.xlog_var)
+		xlog_checkbox = Checkbutton(self.frame_options, text="Logarithmic X axis", variable=self.xlog_var, command=self.xlog_event)
 		xlog_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
 		
 		self.options_row += 1
+		
+		#Whether the number of bins should be automated
+		#This is a checkbox
+		self.nbins_auto_var = IntVar()
+		self.nbins_auto_var.set(1)
+		nbins_auto_checkbox = Checkbutton(self.frame_options, text="Automated N bins", variable=self.nbins_auto_var, command=self.nbins_auto_event)
+		nbins_auto_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
+		
+		self.options_row += 1
+		
+		#X axis range for the histogram figure
+		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Number of bins:", "", entry_id=True, event_on_entry="create_histogram")
+		
+		#By default this option is disabled
+		self.nbins_var_id.config(state=DISABLED)
 		
 		self.label_separator()
 		
@@ -286,17 +310,16 @@ class coffeegrindsize_GUI:
 		self.options_row += 1
 		
 		#Add a few horizontal spaces
-		for i in range(4):
-			self.label_separator()
+		#for i in range(4):
+		self.label_separator()
 		
 		#Button for resetting all options to default
 		reset_params_button = Button(self.frame_options, text="Reset to Default Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row, column=0)
-		self.options_row += 1
 		
 		#Button to open blog
 		blog_button = Button(self.frame_options, text="Read Coffee AD Astra Blog", command=self.blog_goto)
-		blog_button.grid(row=self.options_row, column=0)
+		blog_button.grid(row=self.options_row, column=1)
 		self.options_row += 1
 		
 		# === Create a canvas to display images and figures ===
@@ -344,7 +367,7 @@ class coffeegrindsize_GUI:
 		histogram_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to save histogram to disk
-		savehist_button = Button(toolbar, text="Save Histogram...", command=self.save_histogram, highlightbackground=toolbar_bg)
+		savehist_button = Button(toolbar, text="Save View...", command=self.save_histogram, highlightbackground=toolbar_bg)
 		savehist_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
@@ -394,6 +417,53 @@ class coffeegrindsize_GUI:
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("q", self.quit_region_select)
 	
+	#Method to refresh histograms when xlog is toggled
+	def xlog_event(self):
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram()
+	
+	# #Method to refresh histograms when number of bins are changed
+	# def nbins_event(self):
+		
+	# 	#If there is already a histogram in play, refresh it
+	# 	if self.img_histogram is not None:
+	# 		self.create_histogram()
+	
+	#Method to refresh histograms when automated bins are changed
+	def nbins_auto_event(self):
+		
+		#If not automated then enable the option
+		if self.nbins_auto_var.get() == 0:
+			self.nbins_var_id.config(state=NORMAL)
+		
+		#If automated then disable the option
+		if self.nbins_auto_var.get() == 1:
+			self.nbins_var_id.config(state=DISABLED)
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram()
+	
+	#Method to set the X axis options to automated
+	def xaxis_auto_event(self):
+		
+		#If there is already a histogram in play, refresh it
+		if self.img_histogram is not None:
+			self.create_histogram()
+		
+		#If not automated then enable the parameters
+		if self.xaxis_auto_var.get() == 0:
+			self.xmin_var_id.config(state=NORMAL)
+			self.xmax_var_id.config(state=NORMAL)
+		
+		#If automated then disable the parameters
+		if self.xaxis_auto_var.get() == 1:
+			self.xmin_var_id.config(state=DISABLED)
+			self.xmax_var_id.config(state=DISABLED)
+	
+	#Method to select the reference object in the image with the mouse
 	def select_reference_object_mouse(self):
 		
 		#Verify that an image is loaded
@@ -1805,25 +1875,32 @@ class coffeegrindsize_GUI:
 			raise ValueError("The histogram option "+self.histogram_type.get()+" was not recognized properly")
 		
 		#Read x range from internal variables
-		xmin = float(self.xmin_var.get())
-		xmax = float(self.xmax_var.get())
+		if self.xaxis_auto_var.get() == 1:
+			xmin = np.nanmin(data)
+			xmax = np.nanmax(data)
+		else:
+			xmin = float(self.xmin_var.get())
+			xmax = float(self.xmax_var.get())
+		
+		#Set histogram range
 		histrange = np.array([xmin, xmax])
 		
-		#Set x axis in log units if required
-		if self.xlog_var.get() == 1:
-			binsize = 0.2
-			data = np.log10(data)
+		#Read number of bins from internal variables
+		if self.nbins_auto_var.get() == 1:
+			#Count the number of bins that are required
+			if self.xlog_var.get() == 1:
+				nbins = int(np.ceil( np.log10(float(histrange[1]) - np.log10(histrange[0]))/float(default_log_binsize) ))
+			else:
+				nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize) ))
 		else:
-			binsize = 0.1
-		
-		#Count the number of bins that are required
-		nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(binsize) ))
+			nbins = int(np.round(float(self.nbins_var.get())))
 		
 		#Create a list of bins for plotting
 		if self.xlog_var.get() == 1:
 			bins_input = np.logspace(np.log10(histrange[0]), np.log10(histrange[1]), nbins)
 		else:
 			bins_input = np.linspace(histrange[0], histrange[1], nbins)
+		stop()
 		
 		#Size of figure in pixels
 		figsize_pix = (self.canvas_width, self.canvas_height)
@@ -1835,12 +1912,10 @@ class coffeegrindsize_GUI:
 		#Prepare a figure to display the plot
 		fig = plt.figure(figsize=figsize_inches, dpi=my_dpi)
 		
-		#counts, bin_edges, ignored = plt.hist( samples, bins_log10, histtype='stepfilled', label='histogram' )
-		
 		#Plot the histogram
 		hist_color = [147,36,30]
 		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
-		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label="New Data", weights=data_weights, normed=density, lw=2, rwidth=.8)
+		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype="bar", color=hist_color_fm, label="New Data", weights=data_weights, density=density, lw=2, rwidth=.8)
 		
 		#Make xlog if needed
 		if self.xlog_var.get() == 1:
@@ -1851,14 +1926,25 @@ class coffeegrindsize_GUI:
 		plt.ylabel(ylabel, fontsize=16)
 		
 		# Change size and font of tick labels
-		tick_fontsize = 14
-		ax = gca()
-
-		for tick in ax.xaxis.get_major_ticks():
-			tick.label1.set_fontsize(tick_fontsize)
-		for tick in ax.yaxis.get_major_ticks():
-			tick.label1.set_fontsize(tick_fontsize)
+		#tick_fontsize = 14
+		#ax = gca()
+		#for tick in ax.xaxis.get_major_ticks():
+		#	tick.label1.set_fontsize(tick_fontsize)
+		#for tick in ax.yaxis.get_major_ticks():
+		#	tick.label1.set_fontsize(tick_fontsize)
 		
+		#In xlog mode do not use scientific notation
+		if self.xlog_var.get() == 1:
+			ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+			ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
+		
+		#Set the label fonts
+		minortick_fontsize = 6
+		majortick_fontsize = 14
+		plt.tick_params(axis='both', which='major', labelsize=majortick_fontsize)
+		plt.tick_params(axis='both', which='minor', labelrotation=90, labelsize=minortick_fontsize)
+		
+		#Make ticks longer and thicker
 		ax.tick_params(axis="both", length=5, width=2, which="major")
 		ax.tick_params(axis="both", length=4, width=1, which="minor")
 		
@@ -1927,10 +2013,10 @@ class coffeegrindsize_GUI:
 	def save_histogram(self):
 		
 		#Verify that a figure exists
-		if self.img_histogram is None:
+		if self.img is None:
 			
 			#Update the user interface status
-			self.status_var.set("No Histogram Created Yet... Use Create Histogram Button...")
+			self.status_var.set("No View Created Yet...")
 			
 			#Update the user interface
 			self.master.update()
@@ -1938,18 +2024,39 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
-		#Determine filename code for this type of histogram
-		ihist = np.where(np.array(self.hist_choices) == self.histogram_type.get())
-		hist_code = self.hist_codes[ihist[0][0]]
+		#Update the user interface status
+		self.status_var.set("Saving View...")
+		
+		#Update the user interface
+		self.master.update()
+		
+		#If display is source image
+		image_code = ""
+		if self.display_type.get() == original_image_display_name:
+			image_code = "source_image"
+		
+		#If display is threshold image
+		if self.display_type.get() == threshold_image_display_name:
+			image_code = "threshold_image"
+		
+		#If display is outlines image
+		if self.display_type.get() == outlines_image_display_name:
+			image_code = "outlines_image"
+				
+		#If display is histogram
+		if self.display_type.get() == histogram_image_display_name:
+			#Determine filename code for this type of histogram
+			ihist = np.where(np.array(self.hist_choices) == self.histogram_type.get())
+			image_code = self.hist_codes[ihist[0][0]]
 		
 		#Save file to PNG
-		filename = self.session_name_var.get()+"_hist_"+hist_code+".png"
+		filename = self.session_name_var.get()+"_hist_"+image_code+".png"
 		full_filename = self.output_dir+os.sep+filename
 		
-		self.img_histogram.save(full_filename)
+		self.img.save(full_filename)
 		
 		#Update the user interface status
-		self.status_var.set("Histogram Saved to "+filename+"...")
+		self.status_var.set("Current View Saved to "+filename+"...")
 		
 		#Update the user interface
 		self.master.update()
