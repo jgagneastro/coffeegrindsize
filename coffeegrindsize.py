@@ -221,6 +221,15 @@ class coffeegrindsize_GUI:
 		self.hist_codes = ["num_diam", "num_surf", "mass_diam", "mass_surf", "bev_diam", "bev_surf", "surf_diam", "surf_surf", "ey"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
 		
+		#Whether the X axis of the histogram should be set manually
+		#This is a checkbox
+		self.xaxis_auto_var = IntVar()
+		self.xaxis_auto_var.set(1)
+		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis", variable=self.xaxis_auto_var)
+		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=2, sticky=E)
+		
+		self.options_row += 1
+		
 		#X axis range for the histogram figure
 		self.xmin_var = self.label_entry(def_min_x_axis, "Minimum X Axis:", "")
 		self.xmax_var = self.label_entry(def_max_x_axis, "Maximum X Axis:", "")
@@ -599,6 +608,28 @@ class coffeegrindsize_GUI:
 				#Return to caller
 				return
 		
+		#Reset zoom options etc if moving in to histogram style
+		if self.display_type.get() == histogram_image_display_name:
+			
+			#Delete all polygons
+			self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+			
+			#Reset the effect of dragging
+			self.image_canvas.xview_moveto(0)
+			self.image_canvas.yview_moveto(0)
+			
+			#Remember this new position
+			self.last_image_x = self.canvas_width/2
+			self.last_image_y = self.canvas_height/2
+			
+			#Set scale to unity
+			self.scale = 1
+			
+			#Deactivate zoom buttons
+			self.zoom_in_button.config(state=DISABLED)
+			self.zoom_out_button.config(state=DISABLED)
+			self.reset_zoom_button.config(state=DISABLED)
+			
 		#If we are moving out from histogram display
 		else:
 			if self.previous_display_type == histogram_image_display_name:
@@ -729,26 +760,26 @@ class coffeegrindsize_GUI:
 				#Place histogram in image buffer
 				self.img = self.img_histogram
 				
-				#Delete all polygons
-				self.image_canvas.delete(self.image_canvas.find_withtag('line'))
+				# #Delete all polygons
+				# self.image_canvas.delete(self.image_canvas.find_withtag('line'))
 				
-				#Reset the effect of dragging
-				self.image_canvas.xview_moveto(0)
-				self.image_canvas.yview_moveto(0)
+				# #Reset the effect of dragging
+				# self.image_canvas.xview_moveto(0)
+				# self.image_canvas.yview_moveto(0)
 				
-				#Remember this new position
-				self.last_image_x = self.canvas_width/2
-				self.last_image_y = self.canvas_height/2
-				x = self.canvas_width/2
-				y = self.canvas_height/2
+				# #Remember this new position
+				# self.last_image_x = self.canvas_width/2
+				# self.last_image_y = self.canvas_height/2
+				# x = self.canvas_width/2
+				# y = self.canvas_height/2
 				
-				#Set scale to unity
-				self.scale = 1
+				# #Set scale to unity
+				# self.scale = 1
 				
-				#Deactivate zoom buttons
-				self.zoom_in_button.config(state=DISABLED)
-				self.zoom_out_button.config(state=DISABLED)
-				self.reset_zoom_button.config(state=DISABLED)
+				# #Deactivate zoom buttons
+				# self.zoom_in_button.config(state=DISABLED)
+				# self.zoom_out_button.config(state=DISABLED)
+				# self.reset_zoom_button.config(state=DISABLED)
 			
 			#Determine the size of the image to be drawn and scale it appropriately
 			iw, ih = self.img.size
@@ -1000,6 +1031,10 @@ class coffeegrindsize_GUI:
 	
 	#Method to apply a zoom in
 	def zoom_in(self, event):
+		
+		#Check if the image canvas has focus
+		if self.master.focus_get() != self.image_canvas:
+			return
 		
 		#In histogram mode, do nothing
 		if self.display_type.get() == histogram_image_display_name:
