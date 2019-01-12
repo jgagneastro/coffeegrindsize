@@ -1859,6 +1859,9 @@ class coffeegrindsize_GUI:
 		for tick in ax.yaxis.get_major_ticks():
 			tick.label1.set_fontsize(tick_fontsize)
 		
+		ax.tick_params(axis="both", length=5, width=2, which="major")
+		ax.tick_params(axis="both", length=4, width=1, which="minor")
+		
 		#Use a tight layout
 		plt.tight_layout()
 		
