@@ -242,6 +242,9 @@ class coffeegrindsize_GUI:
 		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
 		
+		self.legend_choices = ["Best", "Upper Right", "Upper Left", "Lower Right", "Lower Left", "Center Right", "Center Left", "Lower Center", "Upper Center", "Right", "Center"]
+		self.legend_type = self.dropdown_entry("Label Position:", self.legend_choices, self.change_histogram_type)
+		
 		#Label for the data
 		self.data_label_var, self.data_label_id = self.label_entry("Current Data", "Data Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
 		
@@ -2113,7 +2116,7 @@ class coffeegrindsize_GUI:
 		plt.ylabel(self.ylabel, fontsize=16)
 		
 		#Add legend
-		plt.legend()
+		plt.legend(loc=self.legend_type.get().lower())
 		
 		# Change size and font of tick labels
 		#tick_fontsize = 14
