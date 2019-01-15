@@ -7,6 +7,7 @@ import numpy as np
 import webbrowser
 import pandas as pd
 import os
+import sys
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -64,7 +65,7 @@ default_log_binsize = 0.05
 default_binsize = 0.1
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91}
+reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91, "2 Euros":25.75, "1 Euro":23.25, "50 Euro Cents":24.25, "20 Euro Cents":22.25}
 
 #Default output directory
 def_output_dir = os.path.expanduser("~")
@@ -237,8 +238,8 @@ class coffeegrindsize_GUI:
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
 		
-		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Mass vs Diameter", "Mass vs Surface", "Extract vs Diameter", "Extract vs Surface", "Surface vs Diameter", "Surface vs Surface", "Extraction Yield Distribution"]
-		self.hist_codes = ["num_diam", "num_surf", "mass_diam", "mass_surf", "bev_diam", "bev_surf", "surf_diam", "surf_surf", "ey"]
+		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Attainable mass vs Diameter", "Attainable mass vs Surface", "Attainable mass vs Volume", "Extracted mass vs Diameter", "Extracted mass vs Surface", "Extracted mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume", "Extraction Yield Distribution"]
+		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
 		
 		#Label for the data
@@ -328,7 +329,7 @@ class coffeegrindsize_GUI:
 		self.zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
 		
 		#Button for resetting zoom in the displayed image
-		self.reset_zoom_button = Button(self.frame_options, text="Reset Zoom", command=self.reset_zoom)
+		self.reset_zoom_button = Button(self.frame_options, text="Reset View", command=self.reset_zoom)
 		self.reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
 		self.options_row += 1
 		
@@ -500,6 +501,10 @@ class coffeegrindsize_GUI:
 		#Quit button
 		quit_button = Button(toolbar2, text="Quit", command=self.quit_gui, highlightbackground=toolbar_bg)
 		quit_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Reset button
+		reset_button = Button(toolbar2, text="Reboot", command=self.reset_gui, highlightbackground=toolbar_bg)
+		reset_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Help button
 		help_button = Button(toolbar2, text="Help", command=self.launch_help, highlightbackground=toolbar_bg)
@@ -1526,6 +1531,32 @@ class coffeegrindsize_GUI:
 		#Refresh the state of the user interface window
 		self.master.update()
 	
+	#Method to calculate attainable mass
+	def attainable_mass_simulate(self, volumes):
+		
+		#This could be done better analytically
+		depth_limit = 0.1 #mm
+		
+		radii = (3.0/4.0*volumes/np.pi)**(1/3)
+		unreachable_volumes = np.full(volumes.size, 0)
+		
+		iboulders = np.where(radii > depth_limit)
+		unreachable_volumes[iboulders[0]] = 4.0/3.0*np.pi*(radii - depth_limit)**3
+		reachable_volumes = volumes - unreachable_volumes
+		stop()
+		
+		return reachable_volumes
+	
+	#Method to calculate extraction yield of particles from their surfaces
+	def ey_simulate(self, surfaces):
+		k_reference = 0.25014
+		extraction_limit = 0.3
+		extraction_speed = 1.0/surfaces
+		ex_curve_param = 120.0
+		extractions = extraction_speed/(k_reference+extraction_speed)*extraction_limits
+		stop()
+		return extractions
+	
 	#Method to launch particle detection analysis
 	def launch_psd(self):
 		
@@ -1941,17 +1972,8 @@ class coffeegrindsize_GUI:
 			self.xlabel = "Particle Volume (mm$^3$)"
 		
 		if "Extraction Yield Distribution" in self.histogram_type.get():
-			#Not coded yet
-			#Create a subroutine that computes the extraction Yield
+			data = self.ey_simulate(source.clusters_surface)
 			self.xlabel = "Extraction Yield (%)"
-			
-			#Refresh the user interface status
-			self.status_var.set("This option has not been coded yet...")
-			
-			#Refresh the state of the user interface window
-			self.master.update()
-			
-			return
 		
 		#If data is still empty then the selection was not recognized
 		if data is None:
@@ -1980,17 +2002,17 @@ class coffeegrindsize_GUI:
 			self.ylabel = "Total Particle Mass Fraction"
 			density = True
 			
-		if "Extract vs" in self.histogram_type.get():
+		if "Attainable mass vs" in self.histogram_type.get():
+			data_weights = self.attainable_mass_simulate(source.clusters_volume)
+			self.ylabel = "Attainable Particle Mass Fraction"
 			density = True
-			self.ylabel = "Beverage Mass Fraction"
 			
-			#Refresh the user interface status
-			self.status_var.set("This option has not been coded yet...")
-			
-			#Refresh the state of the user interface window
-			self.master.update()
-			
-			return
+		if ("Extracted mass vs" in self.histogram_type.get()) or ("Extraction Yield Distribution" in self.histogram_type.get()):
+			reachable_vol = self.attainable_mass_simulate(source.clusters_volume)
+			ey = self.ey_simulate(source.clusters_surface)
+			data_weights = reachable_vol*ey
+			self.ylabel = "Extracted Mass Fraction"
+			density = True
 		
 		#If weights are still empty then the selection was not recognized
 		if data_weights is None:
@@ -2317,6 +2339,11 @@ class coffeegrindsize_GUI:
 		
 		#Update the user interface
 		self.master.update()
+	
+	#Method to quit reset interface
+	def reset_gui(self):
+		python = sys.executable
+		os.execl(python, python, * sys.argv)
 	
 	#Method to quit user interface
 	def quit_gui(self):
