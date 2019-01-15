@@ -144,7 +144,7 @@ class coffeegrindsize_GUI:
 		
 		#Size in pixels of the canvas where the pictures and figures will be displayed
 		self.canvas_width = 1000
-		self.canvas_height = 800
+		self.canvas_height = 780
 		
 		#Set the last image position memory to its default center
 		self.last_image_x = self.canvas_width/2
@@ -218,7 +218,7 @@ class coffeegrindsize_GUI:
 		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix")
 		
 		#Minumum cluster surface that should be considered a valid coffee particle
-		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix^2")
+		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix²")
 		
 		#Minimum cluster roundness that should be considered a valid coffee particle
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
@@ -337,15 +337,15 @@ class coffeegrindsize_GUI:
 		self.label_separator()
 		
 		#Button for resetting all options to default
-		reset_params_button = Button(self.frame_options, text="Reset All Parameters to Default", command=self.reset_status)
+		reset_params_button = Button(self.frame_options, text="Reset All Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row, column=1, columnspan=2, sticky=E)
 		
 		# === Create a canvas to display images and figures ===
 		
-		#Initialize the canvas
+		#Initialize the image canvas
 		image_canvas_bg = "gray40"
 		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
-		self.image_canvas.grid(row=0, column=3, rowspan=145)
+		self.image_canvas.grid(row=0, column=3, rowspan=145, sticky=N)
 		
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
@@ -353,6 +353,94 @@ class coffeegrindsize_GUI:
 		#Display a label when no image was loaded
 		self.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
 		self.noimage_label.pack(side=LEFT)
+		
+		frame_stats_bg = "gray60"
+		self.frame_stats = Frame(self.frame_options, bg=frame_stats_bg, padx=2, pady=10)
+		self.frame_stats.grid(row=33, column=3, sticky=NW, rowspan=10)
+		
+		title_label = Label(self.frame_stats, text="Properties of the Particle Distribution:", font='Helvetica 18 bold', bg=frame_stats_bg)
+		title_label.grid(row=0, sticky=W, padx=self.title_padx, columnspan=12)
+		
+		stats_colsep_width = 3
+		stats_row = 1
+		stats_column = 0
+		
+		stats_entry_width = 5
+		self.diam_average_var = StringVar()
+		self.diam_average_var.set("None")
+		diam_average_label = Label(self.frame_stats, text="Average Diameter:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		diam_average_label.grid(row=stats_row, sticky=E, column=stats_column)
+		diam_average_entry = Label(self.frame_stats, textvariable=self.diam_average_var, width=stats_entry_width, bg=frame_stats_bg)
+		diam_average_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(mm)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_row += 1
+		
+		self.diam_stddev_var = StringVar()
+		self.diam_stddev_var.set("None")
+		diam_stddev_label = Label(self.frame_stats, text="Scatter in Diameter:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		diam_stddev_label.grid(row=stats_row, sticky=E, column=stats_column)
+		diam_stddev_entry = Label(self.frame_stats, textvariable=self.diam_stddev_var, width=stats_entry_width, bg=frame_stats_bg)
+		diam_stddev_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(mm)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_column += 3
+		stats_row =1
+		
+		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
+		separator_label.grid(row=stats_row, column=stats_column)
+		
+		stats_column += 1
+		
+		self.surf_average_var = StringVar()
+		self.surf_average_var.set("None")
+		surf_average_label = Label(self.frame_stats, text="Average Surface:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		surf_average_label.grid(row=stats_row, sticky=E, column=stats_column)
+		surf_average_entry = Label(self.frame_stats, textvariable=self.surf_average_var, width=stats_entry_width, bg=frame_stats_bg)
+		surf_average_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(mm²)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_row += 1
+		
+		self.surf_stddev_var = StringVar()
+		self.surf_stddev_var.set("None")
+		surf_stddev_label = Label(self.frame_stats, text="Scatter in Surface:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		surf_stddev_label.grid(row=stats_row, sticky=E, column=stats_column)
+		surf_stddev_entry = Label(self.frame_stats, textvariable=self.surf_stddev_var, width=stats_entry_width, bg=frame_stats_bg)
+		surf_stddev_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(mm²)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_column += 3
+		stats_row =1
+		
+		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
+		separator_label.grid(row=stats_row, column=stats_column)
+		
+		stats_column += 1
+		
+		self.ey_average_var = StringVar()
+		self.ey_average_var.set("None")
+		ey_average_label = Label(self.frame_stats, text="Average EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		ey_average_label.grid(row=stats_row, sticky=E, column=stats_column)
+		ey_average_entry = Label(self.frame_stats, textvariable=self.ey_average_var, width=stats_entry_width, bg=frame_stats_bg)
+		ey_average_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_row += 1
+		
+		self.ey_stddev_var = StringVar()
+		self.ey_stddev_var.set("None")
+		ey_stddev_label = Label(self.frame_stats, text="Scatter in EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		ey_stddev_label.grid(row=stats_row, sticky=E, column=stats_column)
+		ey_stddev_entry = Label(self.frame_stats, textvariable=self.ey_stddev_var, width=stats_entry_width, bg=frame_stats_bg)
+		ey_stddev_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		# === Populate the toolbar with buttons for analysis ===
 		
