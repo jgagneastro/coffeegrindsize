@@ -382,7 +382,7 @@ class coffeegrindsize_GUI:
 		
 		#Read Blog Button
 		#Button to open blog
-		blog_button = Button(toolbar, text="Read Coffee AD Astra Blog", command=self.blog_goto, highlightbackground=toolbar_bg)
+		blog_button = Button(toolbar, text="Read Coffee Ad Astra Blog", command=self.blog_goto, highlightbackground=toolbar_bg)
 		blog_button.pack(side=RIGHT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Downsample button
@@ -609,7 +609,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to open blog web page
 	def blog_goto(self, *args):
-		webbrowser.open("https://coffeeadastra.com")  # Go to example.com
+		webbrowser.open("https://coffeeadastra.com")
 	
 	#Method to change the reference object on the image
 	def change_reference_object(self, *args):
@@ -2236,6 +2236,9 @@ class coffeegrindsize_GUI:
 	
 	#Method to display help
 	def launch_help(self):
+		webbrowser.open("https://www.dropbox.com/s/m2af0aer2e17xie/coffee_grind_size_manual.pdf?dl=0")
+	
+	def view_statistics(self):
 		
 		#Define some padding parameters
 		xpad = 20
