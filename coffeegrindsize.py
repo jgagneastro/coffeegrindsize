@@ -126,6 +126,7 @@ class coffeegrindsize_GUI:
 		
 		#These variables will contain thresholding information
 		self.mask_threshold = None
+		self.mask_threshold_edge = None
 		
 		#These variables will contain cluster information
 		self.cluster_data = None
@@ -236,12 +237,12 @@ class coffeegrindsize_GUI:
 		
 		#Threshold to select pixels dark enough to serve as a reference in the cost function in the cluster breakup step
 		#self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "")
-		self.reference_threshold_var = StrVar()
+		self.reference_threshold_var = StringVar()
 		self.reference_threshold_var.set(str(def_reference_threshold))
 		
 		#Maximum cost in the cluster breakup step
 		#self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "")
-		self.maxcost_var = StrVar()
+		self.maxcost_var = StringVar()
 		self.maxcost_var.set(str(def_maxcost))
 		
 		#Whether the Particle Detection step should be quick and approximate
@@ -372,6 +373,9 @@ class coffeegrindsize_GUI:
 		
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
+		
+		#Set focus on image canvas
+		self.image_canvas.focus_set()
 		
 		#Display a label when no image was loaded
 		self.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
@@ -1418,6 +1422,11 @@ class coffeegrindsize_GUI:
 		self.polygon_alpha = None
 		self.polygon_beta = None
 		
+		#Reset internal data
+		self.mask_threshold = None
+		self.mask_threshold_edge = None
+		self.cluster_data = None
+		
 		#Update root to avoid problems with file dialog
 		self.master.update()
 		
@@ -1487,13 +1496,7 @@ class coffeegrindsize_GUI:
 		#Only look at the blue channel of the image
 		self.imdata = imdata_3d[:, :, 2]
 		
-		#Determine a value for the white background from the median
-		self.background_median = np.median(self.imdata)
-		
-		#Create a mask for thresholded pixels
-		self.mask_threshold = np.where(self.imdata < self.background_median*np.float(self.threshold_var.get())/100)
-		
-		#If an analysis polygon is set, select only pixels inside the polygon
+		#If an analysis polygon is set, select only pixels inside the polygon to calculate the median
 		if self.polygon_alpha is not None:
 			
 			#Build a polygon from the data stored as internal variables
@@ -1501,8 +1504,37 @@ class coffeegrindsize_GUI:
 			npoly = self.polygon_alpha.size
 			for i in range(npoly-1):
 				coord_list.append((self.polygon_alpha[i+1], self.polygon_beta[i+1]))
-			#poly = geometry.Polygon(coord_list)
 			poly = path.Path(coord_list)
+			
+			image_nx = self.imdata.shape[0]
+			image_ny = self.imdata.shape[1]
+			image_x = np.tile(np.arange(image_nx),(image_ny,1)).T
+			image_y = np.tile(np.arange(image_ny),(image_nx,1))
+			pts = np.vstack((image_y.flatten(), image_x.flatten())).T
+			contained = poly.contains_points(pts)
+			
+			#If no points are in the polygon then break with an error
+			if np.max(contained) is False:
+				
+				#Refresh the user interface status
+				self.status_var.set("No Image Pixels were Located Inside of the Analysis Region")
+				
+				#Refresh the state of the user interface window
+				self.master.update()
+				
+				#Return to caller	
+				return
+			
+			#Calculate median from points inside the polygon only
+			self.background_median = np.median(self.imdata.flatten()[np.where(contained)])
+		else:
+			self.background_median = np.median(self.imdata)
+		
+		#Create a mask for thresholded pixels
+		self.mask_threshold = np.where(self.imdata < self.background_median*np.float(self.threshold_var.get())/100)
+		
+		#If an analysis polygon is set, select only pixels inside the polygon
+		if self.polygon_alpha is not None:
 			
 			pts = np.vstack((self.mask_threshold[1], self.mask_threshold[0])).T
 			contained = poly.contains_points(pts)
@@ -1521,6 +1553,9 @@ class coffeegrindsize_GUI:
 			
 			#Only keep points inside the polygon
 			self.mask_threshold = (self.mask_threshold[0][np.where(contained)[0]], self.mask_threshold[1][np.where(contained)[0]])
+			
+			#Keep a list of edge pixels
+			self.mask_threshold_edge = self.points_along_polygon(self.mask_threshold[1].astype(float), self.mask_threshold[0].astype(float), self.polygon_alpha, self.polygon_beta)
 		
 		#Create a thresholded image for display
 		threshold_im_display = np.copy(imdata_3d)
@@ -1549,6 +1584,42 @@ class coffeegrindsize_GUI:
 		
 		#Refresh the state of the user interface window
 		self.master.update()
+	
+	#Method to calculate minimum distances between a set of 2D points and a 2D line
+	def points_along_polygon(self, X_points, Y_points, X_polygon, Y_polygon):
+		
+		#Count the number of lines
+		nlines = X_polygon.size-1
+		
+		#Read inputs
+		x0 = X_points
+		y0 = Y_points
+		
+		#Array that will contain whether a point crossed one of the lines
+		triggered = np.zeros(x0.size, dtype=bool)
+		
+		#Loop on lines
+		for li in range(nlines):
+			
+			#Read current line start point
+			x1 = X_polygon[li]
+			y1 = Y_polygon[li]
+			x2 = X_polygon[li+1]
+			y2 = Y_polygon[li+1]
+			
+			#Calculate distances between the line and all points
+			ddline = np.abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1) / np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
+			
+			#Select all pixels within the path of the line
+			dd1 = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+			dd2 = np.sqrt((x2 - x0)**2 + (y2 - y0)**2)
+			dd12 = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+			ipath = np.where((ddline <= np.sqrt(2.0)*1.01) & (dd1 <= dd12) & (dd2 <= dd12))
+			triggered[ipath[0]] = True
+		
+		#Find all triggered pixels
+		ipath_all = np.where(triggered)
+		return ipath_all[0]
 	
 	#Method to calculate attainable mass
 	def attainable_mass_simulate(self, volumes):
@@ -1593,7 +1664,7 @@ class coffeegrindsize_GUI:
 		
 		#Read options from internal variables
 		max_cluster_axis = float(self.max_cluster_axis_var.get())
-		min_surface_var = float(self.min_surface_var.get())
+		min_surface = float(self.min_surface_var.get())
 		min_roundness_var = float(self.min_roundness_var.get())
 		reference_threshold = float(self.reference_threshold_var.get())
 		maxcost = float(self.maxcost_var.get())
@@ -1657,7 +1728,7 @@ class coffeegrindsize_GUI:
 			iclust = ipreclust[qc_indices]
 			
 			#Skip cluster if surface is too small
-			if iclust.size < min_surface_var:
+			if iclust.size < min_surface:
 				
 				#Mark current pixel as counted
 				counted[icurrent] = True
@@ -1783,16 +1854,47 @@ class coffeegrindsize_GUI:
 			counted[iclust] = True
 			
 			#Count the surface of this cluster
-			surface = iclust_filtered.size
+			#surface = float(iclust_filtered.size)
 			
 			#Skip cluster if surface is too small
-			if surface < min_surface_var:
+			if iclust_filtered.size < min_surface:
 				continue
 			
 			#Create a list of positions and flux for this cluster
 			xlist = X_mask[iclust[iclust_filtered]]
 			ylist = Y_mask[iclust[iclust_filtered]]
 			zlist = imdata_mask[iclust[iclust_filtered]]
+			
+			#Avoid image edges
+			if xlist.min() <= 0:
+				continue
+			if xlist.max() >= self.img_source.size[0]-1:
+				continue
+			if ylist.min() <= 0:
+				continue
+			if ylist.max() >= self.img_source.size[1]-1:
+				continue
+			
+			#Check if this cluster contains one of the edge pixels
+			if self.mask_threshold_edge is not None:
+				#Loop on edge pixels to determine if at least one is included in the current cluster
+				cluster_is_on_edge = False
+				for ei in range(self.mask_threshold_edge.size):
+					x_edge_i = self.mask_threshold[0][self.mask_threshold_edge[ei]]
+					y_edge_i = self.mask_threshold[1][self.mask_threshold_edge[ei]]
+					found_on_edge = np.where((xlist == x_edge_i) & (ylist == y_edge_i))
+					if found_on_edge[0].size != 0:
+						cluster_is_on_edge = True
+						break
+				if cluster_is_on_edge:
+					continue
+			
+			#Normalize the surface with brightness for grounds smaller than 1 pixel
+			surface_multiplier = (self.background_median-zlist.min())/self.background_median
+			surface_multiplier = np.maximum(surface_multiplier,1.0)
+			
+			#Determine the surface of this cluster
+			surface = float(iclust_filtered.size)*surface_multiplier
 			
 			#Compute an approximate average centroid
 			xmean = np.mean(xlist)
@@ -1863,7 +1965,7 @@ class coffeegrindsize_GUI:
 			surface = self.cluster_data[i]["SURFACE"]
 			
 			#Loop on cluster pixels
-			for l in range(surface):
+			for l in range(xlist.size):
 				
 				#Count neighbors
 				ineigh = np.where((np.abs(xlist - xlist[l]) <= 1) & (np.abs(ylist - ylist[l]) <= 1))
