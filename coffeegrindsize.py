@@ -480,7 +480,7 @@ class coffeegrindsize_GUI:
 		ref_obj_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select region containing the coffee grounds
-		region_button = Button(toolbar, text="Select Analysis Region", command=self.select_region, highlightbackground=toolbar_bg)
+		region_button = Button(toolbar, text="Select Analysis Region", command=lambda: self.select_region(None), highlightbackground=toolbar_bg)
 		region_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to apply image threshold
@@ -576,6 +576,8 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind_all("i", self.zoom_in)
 		self.image_canvas.bind_all("o", self.zoom_out)
 		
+		self.image_canvas.bind_all("s", self.select_region)
+		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("q", self.quit_region_select)
 	
@@ -643,7 +645,7 @@ class coffeegrindsize_GUI:
 		self.master.update()
 	
 	#Method to select analysis region
-	def select_region(self):
+	def select_region(self, event):
 		
 		#Do nothing if already in select region mode
 		if self.mouse_click_mode == "SELECT_REGION":
@@ -975,7 +977,8 @@ class coffeegrindsize_GUI:
 	def redraw(self, x=0, y=0):
 			
 			#Delete all currently drawn lines
-			self.image_canvas.delete(self.image_canvas.find_withtag("line"))
+			#self.image_canvas.delete(self.image_canvas.find_withtag("line"))
+			self.image_canvas.delete("all")
 			
 			#Delete currently drawn image if there is one
 			if self.image_id:
