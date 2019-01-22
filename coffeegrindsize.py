@@ -1413,26 +1413,40 @@ class coffeegrindsize_GUI:
 		#Redraw the image
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
 		
+		#Reset state
+		self.reset_state()
+		
 		#Update the user interface status
 		self.status_var.set("The Image was Downsampled by a Factor two... Current Size is ("+str(self.img.size[0])+", "+str(self.img.size[1])+")")
 		
 		#Update the user interface
 		self.master.update()
-		
+	
+	#Method to reset state
+	def reset_state(self):
+		self.polygon_alpha = None
+		self.polygon_beta = None
+		self.mask_threshold = None
+		self.mask_threshold_edge = None
+		self.cluster_data = None
+		self.mouse_click_mode = None
+		self.img_threshold = None
+		self.img_clusters = None
+		self.img_histogram = None
+		self.nclusters = None
+		self.cluster_data = None
+		self.pixel_length_var.set(None)
+		self.physical_length_var.set(None)
+		self.physical_angle_var.set(None)
+		self.pixel_scale_var.set(None)
+	
 	#Method to open an image from the disk
 	def open_image(self):
 		
 		#Delete all currently drawn lines
 		self.image_canvas.delete(self.image_canvas.find_withtag("line"))
 		
-		#Reset the region if it exists
-		self.polygon_alpha = None
-		self.polygon_beta = None
-		
-		#Reset internal data
-		self.mask_threshold = None
-		self.mask_threshold_edge = None
-		self.cluster_data = None
+		self.reset_state()
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
