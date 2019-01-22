@@ -19,11 +19,7 @@ from matplotlib import path
 #Set thick axes
 from matplotlib import rc
 rc("axes", linewidth=2)
-#from pylab import gca
 
-#Set latex fonts
-#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-#rc('text', usetex=True)
 
 #Temporary for debugging purposes
 import pdb
@@ -2706,7 +2702,7 @@ class coffeegrindsize_GUI:
 		#If display is outlines image
 		if self.display_type.get() == outlines_image_display_name:
 			image_code = "outlines_image"
-				
+		
 		#If display is histogram
 		if self.display_type.get() == histogram_image_display_name:
 			#Determine filename code for this type of histogram
