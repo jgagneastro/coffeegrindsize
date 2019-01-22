@@ -469,6 +469,23 @@ class coffeegrindsize_GUI:
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
+		stats_column += 3
+		stats_row =1
+		
+		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
+		separator_label.grid(row=stats_row, column=stats_column)
+		
+		stats_column += 1
+		
+		self.eff_var = StringVar()
+		self.eff_var.set("None")
+		eff_label = Label(self.frame_stats, text="Efficiency:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		eff_label.grid(row=stats_row, sticky=E, column=stats_column)
+		eff_entry = Label(self.frame_stats, textvariable=self.eff_var, width=stats_entry_width, bg=frame_stats_bg)
+		eff_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
 		# === Populate the toolbar with buttons for analysis ===
 		
 		#Button to open an image of the coffee grounds picture
@@ -773,6 +790,10 @@ class coffeegrindsize_GUI:
 	
 	#Method to register changes in the histogram type option
 	def change_histogram_type(self, *args):
+		
+		#Deactivate log if EY distribution
+		if self.histogram_type.get() == "Extraction Yield Distribution":
+			self.xlog_var.set(0)
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
@@ -1668,12 +1689,11 @@ class coffeegrindsize_GUI:
 		depth_limit = 0.1 #mm
 		
 		radii = (3.0/4.0*volumes/np.pi)**(1/3)
-		unreachable_volumes = np.full(volumes.size, 0)
+		unreachable_volumes = np.full(volumes.size, 0.0)
 		
 		iboulders = np.where(radii > depth_limit)
-		unreachable_volumes[iboulders[0]] = 4.0/3.0*np.pi*(radii - depth_limit)**3
+		unreachable_volumes[iboulders[0]] = 4.0/3.0*np.pi*(radii[iboulders[0]] - depth_limit)**3
 		reachable_volumes = volumes - unreachable_volumes
-		stop()
 		
 		return reachable_volumes
 	
@@ -1682,9 +1702,8 @@ class coffeegrindsize_GUI:
 		k_reference = 0.25014
 		extraction_limit = 0.3
 		extraction_speed = 1.0/surfaces
-		ex_curve_param = 120.0
-		extractions = extraction_speed/(k_reference+extraction_speed)*extraction_limits
-		stop()
+		extractions = extraction_speed/(k_reference+extraction_speed)*extraction_limit
+		
 		return extractions
 	
 	#Method to launch particle detection analysis
@@ -2149,6 +2168,9 @@ class coffeegrindsize_GUI:
 		if hist_label is None:
 			hist_label = self.data_label_var.get()
 		
+		#Whether default bins need to be inflated
+		default_bin_inflate = 1.0
+		
 		# === Define X axis as required ===
 		
 		#If X data is diameter
@@ -2167,8 +2189,12 @@ class coffeegrindsize_GUI:
 			self.xlabel = "Particle Volume (mm$^3$)"
 		
 		if "Extraction Yield Distribution" in self.histogram_type.get():
-			data = self.ey_simulate(source.clusters_surface)
+			data = self.ey_simulate(source.clusters_surface/pixel_scale**2)*100
 			self.xlabel = "Extraction Yield (%)"
+			if self.xlog_var.get() == 0:
+				default_bin_inflate = 8
+			else:
+				default_bin_inflate = 4
 		
 		#If data is still empty then the selection was not recognized
 		if data is None:
@@ -2189,22 +2215,22 @@ class coffeegrindsize_GUI:
 		if "Surface vs" in self.histogram_type.get():
 			data_weights = source.clusters_surface
 			density = True
-			self.ylabel = "Total Particle Surface Fraction"
+			self.ylabel = "Total Surface Fraction"
 			
 		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
 		if "Mass vs" in self.histogram_type.get():
 			data_weights = source.clusters_volume
-			self.ylabel = "Total Particle Mass Fraction"
+			self.ylabel = "Total Mass Fraction"
 			density = True
 			
 		if "Attainable mass vs" in self.histogram_type.get():
-			data_weights = self.attainable_mass_simulate(source.clusters_volume)
-			self.ylabel = "Attainable Particle Mass Fraction"
+			data_weights = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
+			self.ylabel = "Attainable Mass Fraction"
 			density = True
 			
 		if ("Extracted mass vs" in self.histogram_type.get()) or ("Extraction Yield Distribution" in self.histogram_type.get()):
-			reachable_vol = self.attainable_mass_simulate(source.clusters_volume)
-			ey = self.ey_simulate(source.clusters_surface)
+			reachable_vol = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
+			ey = self.ey_simulate(source.clusters_surface/pixel_scale**2)*100
 			data_weights = reachable_vol*ey
 			self.ylabel = "Extracted Mass Fraction"
 			density = True
@@ -2217,6 +2243,9 @@ class coffeegrindsize_GUI:
 		if self.xaxis_auto_var.get() == 1:
 			xmin = np.nanmin(data)
 			xmax = np.nanmax(data)
+			if "Extraction Yield Distribution" in self.histogram_type.get():
+				xmin = np.minimum(xmin, 20)
+				xmax = np.maximum(xmin, 30)
 		else:
 			try:
 				xmin = float(self.xmin_var.get())
@@ -2239,9 +2268,9 @@ class coffeegrindsize_GUI:
 			if self.nbins_auto_var.get() == 1:
 				#Count the number of bins that are required
 				if self.xlog_var.get() == 1:
-					nbins = int(np.ceil( np.log10(float(histrange[1]) - np.log10(histrange[0]))/float(default_log_binsize) ))
+					nbins = int(np.ceil( np.log10(float(histrange[1]) - np.log10(histrange[0]))/float(default_log_binsize*default_bin_inflate) ))
 				else:
-					nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize) ))
+					nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize*default_bin_inflate) ))
 			else:
 				try:
 					nbins = int(np.round(float(self.nbins_var.get())))
@@ -2267,6 +2296,92 @@ class coffeegrindsize_GUI:
 		
 		return bins_input
 	
+	#Weighted standard deviation (un-biased reliability weights by default)
+	def weighted_stddev(self, data, weights, frequency=False, unbiased=True):
+		
+		#Calculate the bias correction estimator
+		if unbiased is True:
+			if frequency is True:
+				bias_estimator = (np.nansum(weights) - 1.0)/np.nansum(weights)
+			else:
+				bias_estimator = 1.0 - (np.nansum(weights**2))/(np.nansum(weights)**2)
+		else:
+			bias_estimator = 1.0
+		
+		#Normalize weights
+		weights /= np.nansum(weights)
+		
+		#Calculate weighted average
+		wmean = np.nansum(data*weights)
+		
+		#Deviations from average
+		deviations = data - wmean
+		
+		#Un-biased weighted variance
+		wvar = np.nansum(deviations**2*weights)/bias_estimator
+		
+		#Un-biased weighted standard deviation
+		wstddev = np.sqrt(wvar)
+		
+		return wstddev
+	
+	#Method to update statistics of the PSD
+	def update_statistics(self):
+		#self.eff_var,self.ey_stddev_var,self.ey_average_var,self.surf_stddev_var,self.surf_average_var,self.diam_stddev_var,self.diam_average_var,
+		
+		#Read internal data
+		try:
+			pixel_scale = float(self.pixel_scale_var.get())
+		except:
+			return
+		
+		diameters = 2*np.sqrt(self.clusters_long_axis*self.clusters_short_axis)/pixel_scale
+		surfaces = self.clusters_surface/pixel_scale**2
+		volumes = self.clusters_volume/pixel_scale**3
+		eys = self.ey_simulate(surfaces)
+		attainable_masses = self.attainable_mass_simulate(volumes)
+		effs = attainable_masses/volumes
+		
+		diameters_average = np.mean(diameters)
+		diameters_stddev = np.std(diameters)
+		
+		surfaces_average = np.mean(surfaces)
+		surfaces_stddev = np.std(surfaces)
+		
+		#volumes_average = np.mean(volumes)
+		#volumes_stddev = np.std(volumes)
+		
+		weights = eys*attainable_masses
+		eys_average = np.sum(eys*weights)/np.sum(weights)*100
+		eys_stddev = self.weighted_stddev(eys,weights,frequency=True,unbiased=True)*100
+		
+		effs_average = np.mean(effs)*100
+		
+		diameters_average_str = "{0:.{1}f}".format(diameters_average, 2)
+		diameters_stddev_str = "{0:.{1}f}".format(diameters_stddev, 2)
+		
+		surfaces_average_str = "{0:.{1}f}".format(surfaces_average, 2)
+		surfaces_stddev_str = "{0:.{1}f}".format(surfaces_stddev, 2)
+		
+		#volumes_average_str = "{0:.{1}f}".format(volumes_average, 3)
+		#volumes_stddev_str = "{0:.{1}f}".format(volumes_stddev, 3)
+		
+		eys_average_str = "{0:.{1}f}".format(eys_average, 1)
+		eys_stddev_str = "{0:.{1}f}".format(eys_stddev, 1)
+		
+		effs_average_str = "{0:.{1}f}".format(effs_average, 1)
+		
+		self.diam_average_var.set(diameters_average_str)
+		self.diam_stddev_var.set(diameters_stddev_str)
+		
+		self.surf_average_var.set(surfaces_average_str)
+		self.surf_stddev_var.set(surfaces_stddev_str)
+		
+		self.ey_average_var.set(eys_average_str)
+		self.ey_stddev_var.set(eys_stddev_str)
+		
+		self.eff_var.set(effs_average_str)
+		
 	#Method to create histogram
 	def create_histogram(self, event):
 		
@@ -2307,6 +2422,9 @@ class coffeegrindsize_GUI:
 		# === Generate histogram from data ===
 		
 		bins_input = self.psd_hist_from_data(self)
+		
+		#Update the statistics
+		self.update_statistics()
 		
 		#If comparison data is loaded plot it
 		if self.comparison.nclusters is not None:
