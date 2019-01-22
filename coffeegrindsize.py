@@ -1868,11 +1868,11 @@ class coffeegrindsize_GUI:
 			#Avoid image edges
 			if xlist.min() <= 0:
 				continue
-			if xlist.max() >= self.img_source.size[0]-1:
+			if xlist.max() >= self.img_source.size[1]-1:
 				continue
 			if ylist.min() <= 0:
 				continue
-			if ylist.max() >= self.img_source.size[1]-1:
+			if ylist.max() >= self.img_source.size[0]-1:
 				continue
 			
 			#Check if this cluster contains one of the edge pixels
