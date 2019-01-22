@@ -2145,7 +2145,7 @@ class coffeegrindsize_GUI:
 		#Return the final list of indices to the caller
 		return iout
 	
-	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar"):
+	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar", ypos_errorbar=None):
 		
 		#Read internal data
 		try:
@@ -2292,9 +2292,64 @@ class coffeegrindsize_GUI:
 		
 		#Plot the histogram
 		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
-		ypdf, xpdf, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights, density=density, lw=2, rwidth=.8)
+		ypdf, xpdfleft, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights, density=density, lw=2, rwidth=.8)
 		
-		return bins_input
+		#Find the value for the center of each bin
+		xpdf = xpdfleft[0:-1] + np.diff(xpdfleft)/2.0
+		
+		#Calculate the average weighted by histogram height
+		avg = np.nansum(ypdf*xpdf)/np.nansum(ypdf)
+		
+		#Create a cumulative density function (CDF) for the histogram
+		ycdf = np.nancumsum(ypdf)/np.nansum(ypdf)
+		
+		#Find out positions of the CDF left and right of the average
+		ileft = np.where(xpdf < avg)
+		iright = np.where(xpdf >= avg)
+		
+		#Build an independently normalized CDF on the right side of the average
+		ycdfpos = ycdf[iright[0]] - np.nanmin(ycdf[iright[0]])
+		ycdfpos /= np.nanmax(ycdfpos)
+		
+		#Interpolate position that corresponds to 1-sigma positive error bar
+		p1s = 0.68268949
+		avg_plus_epos = np.interp(p1s,ycdfpos,xpdf[iright[0]])
+		epos = avg_plus_epos - avg
+		
+		#Build an independently normalized CDF on the left side of the average
+		ycdfneg = -ycdf[ileft[0]] - np.nanmin(-ycdf[ileft[0]])
+		ycdfneg /= np.nanmax(ycdfneg)
+		
+		#Interpolate position that corresponds to 1-sigma negative error bar
+		avg_min_eneg = np.interp(p1s, np.flip(ycdfneg, axis=0), np.flip(xpdf[ileft[0]], axis=0))
+		eneg = avg - avg_min_eneg
+		
+		#Determine the vertical position where the "average" data point will be plotted
+		if ypos_errorbar is None:
+			ypos_errorbar = np.nanmax(ypdf)*0.05
+		
+		#Plot the "average" datapoint
+		xerr = np.array([eneg, epos]).reshape(2, 1)
+		marker = "o"
+		markersize = 8
+		elinewidth = 2
+		capsize = 3
+		capthick = 2
+		serr1 = plt.errorbar(avg, ypos_errorbar, xerr=xerr, marker=marker, markersize=markersize*1.4, linestyle="", color="w", elinewidth=elinewidth+2, capsize=capsize+1, capthick=capthick+1, alpha=0.8, zorder=19)
+		
+		serr2 = plt.errorbar(avg, ypos_errorbar, xerr=xerr, marker=marker, markersize=markersize, linestyle="", color=hist_color_fm, elinewidth=elinewidth, ecolor=self.lighter(hist_color_fm,0.3), markeredgewidth=1.5, markeredgecolor="k", capsize=capsize, capthick=capthick, zorder=20)
+		
+		#Return the bin input positions and the vertical position of the "average" data point for reference
+		return bins_input, ypos_errorbar
+	
+	#Method to return a lighter color
+	def lighter(self, color, percent):
+		color = np.array(color)*255
+		white = np.array([255, 255, 255])
+		vector = white - color
+		output = tuple((color + vector*percent)/255.0)
+		return output
+
 	
 	#Weighted standard deviation (un-biased reliability weights by default)
 	def weighted_stddev(self, data, weights, frequency=False, unbiased=True):
@@ -2421,21 +2476,14 @@ class coffeegrindsize_GUI:
 		
 		# === Generate histogram from data ===
 		
-		bins_input = self.psd_hist_from_data(self)
+		bins_input, ypos_errorbar = self.psd_hist_from_data(self)
 		
 		#Update the statistics
 		self.update_statistics()
 		
 		#If comparison data is loaded plot it
 		if self.comparison.nclusters is not None:
-			self.psd_hist_from_data(self.comparison, hist_color=[74, 124, 179], hist_label=self.comparison_data_label_var.get(), bins_input=bins_input, histtype="step")
-		#self.comparison_clusters_surface = dataframe["SURFACE"].values
-		#self.comparison_clusters_roundness = dataframe["ROUNDNESS"].values
-		#self.comparison_clusters_long_axis = dataframe["LONG_AXIS"].values
-		#self.comparison_clusters_short_axis = dataframe["SHORT_AXIS"].values
-		#self.comparison_clusters_volume = dataframe["VOLUME"].values
-		#self.comparison_nclusters = self.comparison_clusters_surface.size
-		#self.comparison_pixel_scale = dataframe["PIXEL_SCALE"].values[0]
+			self.psd_hist_from_data(self.comparison, hist_color=[74, 124, 179], hist_label=self.comparison_data_label_var.get(), bins_input=bins_input, histtype="step", ypos_errorbar=ypos_errorbar*2)
 		
 		#Make xlog if needed
 		if self.xlog_var.get() == 1:
@@ -2449,21 +2497,12 @@ class coffeegrindsize_GUI:
 		plt.legend(loc=self.legend_type.get().lower())
 		
 		# Change size and font of tick labels
-		#tick_fontsize = 14
 		ax = plt.gca()
-		#for tick in ax.xaxis.get_major_ticks():
-		#	tick.label1.set_fontsize(tick_fontsize)
-		#for tick in ax.yaxis.get_major_ticks():
-		#	tick.label1.set_fontsize(tick_fontsize)
 		
 		#Set the label fonts
 		minortick_fontsize = 5
 		majortick_fontsize = 8
 		plt.tick_params(axis='both', which='major', labelsize=majortick_fontsize)
-		
-		#if self.xlog_var.get() == 1:
-		#	plt.tick_params(axis='x', which='major', labelrotation=90, pad=None)
-		#	plt.tick_params(axis='x', which='minor', labelrotation=90, labelsize=minortick_fontsize)
 		
 		#Make ticks longer and thicker
 		ax.tick_params(axis="both", length=5, width=2, which="major")
