@@ -476,7 +476,7 @@ class coffeegrindsize_GUI:
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select a reference object
-		ref_obj_button = Button(toolbar, text="Select Reference Object", command=self.select_reference_object_mouse, highlightbackground=toolbar_bg)
+		ref_obj_button = Button(toolbar, text="Select Reference Object", command=lambda: self.select_reference_object_mouse(None), highlightbackground=toolbar_bg)
 		ref_obj_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select region containing the coffee grounds
@@ -579,6 +579,8 @@ class coffeegrindsize_GUI:
 		
 		self.image_canvas.bind_all("s", self.select_region)
 		
+		self.image_canvas.bind_all("r", self.select_reference_object_mouse)
+		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("q", self.quit_region_select)
 	
@@ -622,7 +624,7 @@ class coffeegrindsize_GUI:
 			self.xmax_var_id.config(state=DISABLED)
 	
 	#Method to select the reference object in the image with the mouse
-	def select_reference_object_mouse(self):
+	def select_reference_object_mouse(self, event):
 		
 		#Verify that an image is loaded
 		if self.img_source is None:
