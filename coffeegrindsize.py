@@ -31,6 +31,15 @@ stop = pdb.set_trace
 
 # === Default Parameters for analysis and plotting ===
 
+#Threshold to select reference dark pixel
+def_reference_threshold = 0.1
+
+#Smoothing along path to reference pixel
+nsmooth = 3 #Not accessible yet in the GUI
+
+#Maximum cost for disjoint particles
+def_maxcost = 0.07
+
 #Default value for image thresholding (%)
 def_threshold = 58.8
 
@@ -224,6 +233,16 @@ class coffeegrindsize_GUI:
 		#Minimum cluster roundness that should be considered a valid coffee particle
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
 		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
+		
+		#Threshold to select pixels dark enough to serve as a reference in the cost function in the cluster breakup step
+		#self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "")
+		self.reference_threshold_var = StrVar()
+		self.reference_threshold_var.set(str(def_reference_threshold))
+		
+		#Maximum cost in the cluster breakup step
+		#self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "")
+		self.maxcost_var = StrVar()
+		self.maxcost_var.set(str(def_maxcost))
 		
 		#Whether the Particle Detection step should be quick and approximate
 		self.quick_var = IntVar()
@@ -667,6 +686,9 @@ class coffeegrindsize_GUI:
 		#Only active in SELECT_REGION mode
 		if self.mouse_click_mode == "SELECT_REGION":
 			
+			#Change mouse click mode
+			self.mouse_click_mode = None
+			
 			#Destroy current mobile line if it exists
 			if self.selreg_current_line is not None:
 				self.image_canvas.delete(self.selreg_current_line)
@@ -699,9 +721,6 @@ class coffeegrindsize_GUI:
 			
 			#Update the user interface
 			self.master.update()
-			
-			#Change mouse click mode
-			self.mouse_click_mode = None
 	
 	#Method to open blog web page
 	def blog_goto(self, *args):
@@ -887,9 +906,6 @@ class coffeegrindsize_GUI:
 		
 		#Return internal variable to caller
 		return data_var
-	
-	def test(self):
-		print("!")
 	
 	#Method to display a label in the options frame
 	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None, addcol=0, event_on_enter=None):
@@ -1407,8 +1423,8 @@ class coffeegrindsize_GUI:
 		
 		#Do not delete
 		#Invoke a file dialog to select image
-		#image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
-		image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
+		#image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
@@ -1575,38 +1591,35 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
-		#Options not accessible in the GUI
-		reference_threshold = 0.1
-		nsmooth = 3
-		maxcost = 0.35
-		
 		#Read options from internal variables
 		max_cluster_axis = float(self.max_cluster_axis_var.get())
 		min_surface_var = float(self.min_surface_var.get())
 		min_roundness_var = float(self.min_roundness_var.get())
+		reference_threshold = float(self.reference_threshold_var.get())
+		maxcost = float(self.maxcost_var.get())
 		
 		#Sort the thresholded pixel indices by increasing brightness in the blue channel
-		sort_indices = np.argsort(self.imdata[self.mask_threshold])
-		self.mask_threshold = (self.mask_threshold[0][sort_indices], self.mask_threshold[1][sort_indices])
+		sort_indices = np.argsort(self.imdata[self.mask_threshold].astype(float))
+		mask_threshold_sorted = (self.mask_threshold[0][sort_indices], self.mask_threshold[1][sort_indices])
 		
-		#Create an image of the X and Y positions
-		#Not needed
-		#imx = np.tile(np.arange(self.imdata.shape[1]),(self.imdata.shape[0],1))
-		#imy = np.tile(np.arange(self.imdata.shape[0]),(self.imdata.shape[1],1)).transpose()
+		#Create a list of X and Y positions
+		X_mask = mask_threshold_sorted[0].astype(float)
+		Y_mask = mask_threshold_sorted[1].astype(float)
+		nmask = mask_threshold_sorted[0].size
 		
 		#Catalog image brightness
-		imdata_mask = self.imdata[self.mask_threshold]
+		imdata_mask = self.imdata[mask_threshold_sorted].astype(float)
 		
 		#Create an empty list of clusters
 		self.cluster_data = []
 		
 		#Start the creation of clusters
-		counted = np.zeros(self.mask_threshold[0].size, dtype=bool)
-		for i in range(self.mask_threshold[0].size):
+		counted = np.zeros(nmask, dtype=bool)
+		for i in range(nmask):
 			
 			#Update status only on some steps
 			if i%10 == 0:
-				frac_counted = np.sum(counted)/self.mask_threshold[0].size*100
+				frac_counted = np.sum(counted)/float(nmask)*100
 				frac_counted = np.minimum(frac_counted,99.9)
 				frac_counted_str = "{0:.{1}f}".format(frac_counted, 1)
 				self.status_var.set("Iteration #"+str(i)+"; Fraction of thresholded pixels that were analyzed: "+frac_counted_str+" %")
@@ -1624,7 +1637,7 @@ class coffeegrindsize_GUI:
 			icurrent = iopen[0]
 			
 			#Calculate distances between current pixel and all other open pixels
-			dopen2 = (self.mask_threshold[0][icurrent] - self.mask_threshold[0][iopen])**2 + (self.mask_threshold[1][icurrent] - self.mask_threshold[1][iopen])**2
+			dopen2 = (X_mask[icurrent] - X_mask[iopen])**2 + (Y_mask[icurrent] - Y_mask[iopen])**2
 			
 			#Select those within a reasonable distance only
 			iwithinmax = np.where(dopen2 <= max_cluster_axis**2)
@@ -1640,7 +1653,7 @@ class coffeegrindsize_GUI:
 			
 			#Do a quick clustering around the current pixel
 			ipreclust = iopen[iwithinmax]
-			qc_indices = self.quick_cluster(self.mask_threshold[0][ipreclust], self.mask_threshold[1][ipreclust], self.mask_threshold[0][icurrent], self.mask_threshold[1][icurrent])
+			qc_indices = self.quick_cluster(X_mask[ipreclust], Y_mask[ipreclust], X_mask[icurrent], Y_mask[icurrent])
 			iclust = ipreclust[qc_indices]
 			
 			#Skip cluster if surface is too small
@@ -1651,9 +1664,6 @@ class coffeegrindsize_GUI:
 				
 				#Skip this loop element
 				continue
-			
-			#Create a map of the blue channel flux
-			imdata_mask_cluster = imdata_mask[iclust]
 			
 			#Unless the quick option is selected, now do a rejection of pixels based on the image values in the blue channel. The goal of this step is to break clumps of coffee grounds
 			if self.quick_var.get() == 1:
@@ -1668,7 +1678,7 @@ class coffeegrindsize_GUI:
 			else:
 				
 				#Order the cluster pixels w-r-t their distance from the current starting pixel
-				dcurrent2 = (self.mask_threshold[0][iclust] - self.mask_threshold[0][icurrent])**2 + (self.mask_threshold[1][iclust] - self.mask_threshold[1][icurrent])**2
+				dcurrent2 = (X_mask[iclust] - X_mask[icurrent])**2 + (Y_mask[iclust] - Y_mask[icurrent])**2
 				iclust = iclust[np.argsort(dcurrent2)]
 				
 				#Identify the current pixel in this cluster
@@ -1679,13 +1689,21 @@ class coffeegrindsize_GUI:
 					raise ValueError("The starting pixel was not found in a cluster. This should never happen !")
 				
 				#Create a cost function along the positions of this cluster for pixel rejection
-				cost = ( imdata_mask_cluster - imdata_mask[icurrent] )**2/self.background_median**2
+				cost = ( imdata_mask[iclust] - imdata_mask[icurrent] )**2/self.background_median**2
 				
 				#Cost cannot be negative
 				cost = np.maximum(cost, 0)
 				
+				#Visualize the cost
+				#data_test = np.full(nmask,50)
+				#data_test[iclust] = 100*cost
+				#test = np.copy(self.imdata)*0
+				#test[mask_threshold_sorted] = data_test.astype(int)
+				#test_img = Image.fromarray(test)
+				#test_img.save("/Users/gagne/test.png")
+				
 				#Loop on the cluster and check if the cost along the path to the starting pixel is exceeded
-				iclust_filtered = np.copy(icurrent_in_clust[0])#== glist
+				iclust_filtered = np.copy(icurrent_in_clust[0])
 				maxcost_along_path = np.full(iclust.size, np.nan)
 				for ci in range(iclust.size):
 					
@@ -1694,7 +1712,7 @@ class coffeegrindsize_GUI:
 						continue
 					
 					#Make a list of all current pixels that are almost as dark as the reference pixel
-					idark_in_list = np.where( imdata_mask_cluster[iclust_filtered] <= ( ( self.background_median - imdata_mask[icurrent] )*reference_threshold + imdata_mask[icurrent] ) )
+					idark_in_list = np.where( imdata_mask[iclust[iclust_filtered]] <= ( ( self.background_median - imdata_mask[icurrent] )*reference_threshold + imdata_mask[icurrent] ) )
 					idark = iclust[iclust_filtered[idark_in_list[0]]]
 					
 					#There should be at least one dark pixel
@@ -1703,7 +1721,7 @@ class coffeegrindsize_GUI:
 					
 					#Pick the nearest reference dark pixel
 					if idark.size > 1:
-						dist2 = ( self.mask_threshold[0][idark] - self.mask_threshold[0][iclust[ci]] )**2 + ( self.mask_threshold[1][idark] - self.mask_threshold[1][iclust[ci]] )**2
+						dist2 = ( X_mask[idark] - X_mask[iclust[ci]] )**2 + ( Y_mask[idark] - Y_mask[iclust[ci]] )**2
 						idark = idark[np.argmin(dist2)]
 					
 					#If the current pixel was picked as a reference dark pixel then it is automatically accepted
@@ -1714,12 +1732,12 @@ class coffeegrindsize_GUI:
 					else:
 						
 						#Calculate distance between all points and a line that passes through pixel i and the reference dark pixel.
-						x1 = self.mask_threshold[0][iclust[ci]]
-						y1 = self.mask_threshold[1][iclust[ci]]
-						x2 = self.mask_threshold[0][idark]
-						y2 = self.mask_threshold[1][idark]
-						x0 = self.mask_threshold[0][iclust]
-						y0 = self.mask_threshold[1][iclust]
+						x1 = X_mask[iclust[ci]]
+						y1 = Y_mask[iclust[ci]]
+						x2 = X_mask[idark]
+						y2 = Y_mask[idark]
+						x0 = X_mask[iclust]
+						y0 = Y_mask[iclust]
 						
 						ddline = np.abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1) / np.sqrt((y2 - y1)**2 + (x2 - x1)**2)
 						dd1 = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
@@ -1727,7 +1745,7 @@ class coffeegrindsize_GUI:
 						dd12 = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 						
 						#Select all pixels within the path of the line
-						ipath = np.where((ddline <= np.sqrt(2)) & (dd1 <= dd12) & (dd2 <= dd12))
+						ipath = np.where((ddline <= np.sqrt(2.0)) & (dd1 <= dd12) & (dd2 <= dd12))
 						
 						#Deduce distance projected on the line
 						ddonline = np.sqrt(dd2[ipath[0]]**2 - ddline[ipath[0]]**2)
@@ -1735,14 +1753,24 @@ class coffeegrindsize_GUI:
 						#Sort by distance along the line
 						ipath = ipath[0][np.argsort(ddonline)]
 						
+						#Recalculate ddonline
+						ddonline_sorted = np.sqrt(dd2[ipath]**2 - ddline[ipath]**2)
+						
+						#Skip this pixel if the path is broken (this means the line to the darkest pixel ventures outside the cluster)
+						if np.diff(ddonline_sorted).max() > np.sqrt(2.0)*1.01:
+							maxcost_along_path[ci] = None
+							continue
+						
 						#Interpolate cost along this path
 						cost_path = cost[ipath]
 						
 						#Boxcar-sum the cost along the path
-						if nsmooth > cost_path.size:
+						if nsmooth < cost_path.size:
 							cost_path_sm = self.smooth(cost_path, nsmooth)*nsmooth
 						else:
 							cost_path_sm = np.full(cost_path.size, np.sum(cost_path))
+						
+						#cost_path_sm = np.copy(cost_path)
 						
 						#Find the maximum cost along the path
 						maxcost_along_path[ci] = np.max(cost_path_sm)
@@ -1762,9 +1790,9 @@ class coffeegrindsize_GUI:
 				continue
 			
 			#Create a list of positions and flux for this cluster
-			xlist = self.mask_threshold[0][iclust[iclust_filtered]]
-			ylist = self.mask_threshold[1][iclust[iclust_filtered]]
-			zlist = imdata_mask_cluster[iclust_filtered]
+			xlist = X_mask[iclust[iclust_filtered]]
+			ylist = Y_mask[iclust[iclust_filtered]]
+			zlist = imdata_mask[iclust[iclust_filtered]]
 			
 			#Compute an approximate average centroid
 			xmean = np.mean(xlist)
@@ -1797,7 +1825,7 @@ class coffeegrindsize_GUI:
 			volume = np.pi*short_axis**2*axis
 			
 			#Create a structure with the cluster information
-			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist, "YLIST":ylist, "LONG_AXIS":axis, "ROUNDNESS":roundness, "VOLUME":volume, "SHORT_AXIS":short_axis, "XMEAN":xmean, "YMEAN":ymean, "XSTART":self.mask_threshold[0][icurrent], "YSTART":self.mask_threshold[1][icurrent], "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
+			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist.astype(int), "YLIST":ylist.astype(int), "LONG_AXIS":axis, "ROUNDNESS":roundness, "VOLUME":volume, "SHORT_AXIS":short_axis, "XMEAN":xmean, "YMEAN":ymean, "XSTART":X_mask[icurrent].astype(int), "YSTART":Y_mask[icurrent].astype(int), "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
 			
 			#Append cluser data with this dictionary
 			self.cluster_data.append(clusteri_data)
