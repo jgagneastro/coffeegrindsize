@@ -566,6 +566,7 @@ class coffeegrindsize_GUI:
 		
 		#Set up key bindings for dragging the image
 		self.image_canvas.bind("<ButtonPress-1>", self.move_start)
+		self.image_canvas.bind("<ButtonRelease-1>", self.release_mouse)
 		self.image_canvas.bind("<B1-Motion>", self.move_move)
 		
 		#Set up key bindings for drawing a line
@@ -1049,25 +1050,17 @@ class coffeegrindsize_GUI:
 						
 						#I will need to figure out how to delete those when they go outside of the image frame
 	
-	#Method to set the starting point of a drag
-	def move_start(self, event):
-		
-		#Set focus on image canvas to avoid writing in Entries
-		self.image_canvas.focus_set()
-		
-		#In histogram mode, do nothing
-		if self.display_type.get() == histogram_image_display_name:
-			return
-		
-		#In normal mode, set start of motion
-		if self.mouse_click_mode is None:
-			self.image_canvas.scan_mark(event.x, event.y)
+	#Method to set the event when releasing mouse button
+	def release_mouse(self, event):
 		
 		#If this is the second click in Select Reference Object mode, end it
 		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT":
 			
 			#Tell the motion method that we are now in line drawing mode
 			self.mouse_click_mode = None
+			
+			#Reset the drag
+			self.image_canvas.scan_mark(event.x, event.y)
 			
 			#Refresh the user interface status
 			self.status_var.set("The length of the the reference object was set to "+self.pixel_length_var.get()+" pixels... Now select its physical size with the library in the Reference Object dropdown menu, or with a custom Reference Physical Size...")
@@ -1093,9 +1086,20 @@ class coffeegrindsize_GUI:
 			
 			#Refresh the state of the user interface window
 			self.master.update()
-			
-			#Redraw image (TMP is this needed !!)
-			#self.redraw(x=self.last_image_x, y=self.last_image_y)
+		
+	#Method to set the starting point of a drag
+	def move_start(self, event):
+		
+		#Set focus on image canvas to avoid writing in Entries
+		self.image_canvas.focus_set()
+		
+		#In histogram mode, do nothing
+		if self.display_type.get() == histogram_image_display_name:
+			return
+		
+		#In normal mode, set start of motion
+		if self.mouse_click_mode is None:
+			self.image_canvas.scan_mark(event.x, event.y)
 		
 		#In select Region mode, add corners to polygon
 		if self.mouse_click_mode == "SELECT_REGION":
