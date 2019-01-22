@@ -2128,8 +2128,18 @@ class coffeegrindsize_GUI:
 	
 	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar"):
 		
-		#Read pixel scale from internal variables
-		pixel_scale = float(source.pixel_scale_var.get())
+		#Read internal data
+		try:
+			pixel_scale = float(source.pixel_scale_var.get())
+		except:
+			#Update the user interface status
+			self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
 		
 		#Initiate empty data
 		data = None
@@ -2208,8 +2218,18 @@ class coffeegrindsize_GUI:
 			xmin = np.nanmin(data)
 			xmax = np.nanmax(data)
 		else:
-			xmin = float(self.xmin_var.get())
-			xmax = float(self.xmax_var.get())
+			try:
+				xmin = float(self.xmin_var.get())
+				xmax = float(self.xmax_var.get())
+			except:
+				#Update the user interface status
+				self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+				
+				#Update the user interface
+				self.master.update()
+				
+				#Return to caller
+				return
 		
 		#Set histogram range
 		histrange = np.array([xmin, xmax])
@@ -2223,7 +2243,17 @@ class coffeegrindsize_GUI:
 				else:
 					nbins = int(np.ceil( float(histrange[1] - histrange[0])/float(default_binsize) ))
 			else:
-				nbins = int(np.round(float(self.nbins_var.get())))
+				try:
+					nbins = int(np.round(float(self.nbins_var.get())))
+				except:
+					#Update the user interface status
+					self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+					
+					#Update the user interface
+					self.master.update()
+					
+					#Return to caller
+					return
 			
 			#Create a list of bins for plotting
 			if self.xlog_var.get() == 1:
@@ -2458,8 +2488,21 @@ class coffeegrindsize_GUI:
 			#Return to caller
 			return
 		
+		#Read internal data
+		try:
+			pixel_scale = float(self.pixel_scale_var.get())
+		except:
+			#Update the user interface status
+			self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
 		#Create a Pandas dataframe for easier saving
-		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume,"PIXEL_SCALE":float(self.pixel_scale_var.get())})
+		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume,"PIXEL_SCALE":pixel_scale})
 		dataframe.index.name = "ID"
 		
 		#Save file to CSV
