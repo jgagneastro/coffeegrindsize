@@ -1187,6 +1187,9 @@ class coffeegrindsize_GUI:
 	#Method to track the mouse position
 	def motion(self, event):
 		
+		#Set the focus back on canvas
+		self.image_canvas.focus_set()
+		
 		#In histogram mode, do nothing
 		if self.display_type.get() == histogram_image_display_name:
 			return
@@ -1513,6 +1516,20 @@ class coffeegrindsize_GUI:
 				#Return to caller
 				return
 		
+		#Read internal data
+		try:
+			threshold = float(self.threshold_var.get())
+		except:
+			
+			#Update the user interface status
+			self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
 		#Interpret the image into a matrix of numbers
 		imdata_3d = np.array(self.img_source)
 		
@@ -1554,7 +1571,7 @@ class coffeegrindsize_GUI:
 			self.background_median = np.median(self.imdata)
 		
 		#Create a mask for thresholded pixels
-		self.mask_threshold = np.where(self.imdata < self.background_median*np.float(self.threshold_var.get())/100)
+		self.mask_threshold = np.where(self.imdata < self.background_median*threshold/100)
 		
 		#If an analysis polygon is set, select only pixels inside the polygon
 		if self.polygon_alpha is not None:
@@ -1686,11 +1703,23 @@ class coffeegrindsize_GUI:
 			return
 		
 		#Read options from internal variables
-		max_cluster_axis = float(self.max_cluster_axis_var.get())
-		min_surface = float(self.min_surface_var.get())
-		min_roundness_var = float(self.min_roundness_var.get())
-		reference_threshold = float(self.reference_threshold_var.get())
-		maxcost = float(self.maxcost_var.get())
+		try:
+			max_cluster_axis = float(self.max_cluster_axis_var.get())
+			min_surface = float(self.min_surface_var.get())
+			min_roundness_var = float(self.min_roundness_var.get())
+			reference_threshold = float(self.reference_threshold_var.get())
+			maxcost = float(self.maxcost_var.get())
+		except:
+			
+			#Update the user interface status
+			self.status_var.set("Some Options in the User Interface are Invalid Numbers...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
 		
 		#Sort the thresholded pixel indices by increasing brightness in the blue channel
 		sort_indices = np.argsort(self.imdata[self.mask_threshold].astype(float))
