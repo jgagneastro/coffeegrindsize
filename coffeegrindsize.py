@@ -148,7 +148,7 @@ class coffeegrindsize_GUI:
 		
 		#Horizontal and vertical spaces around the toolbar buttons
 		self.toolbar_padx = 6
-		self.toolbar_pady = 6
+		self.toolbar_pady = 0
 		
 		#Size in pixels of the canvas where the pictures and figures will be displayed
 		self.canvas_width = 1000
