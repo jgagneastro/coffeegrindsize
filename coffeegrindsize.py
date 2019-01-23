@@ -119,6 +119,7 @@ class coffeegrindsize_GUI:
 		self.polygon_alpha = None
 		self.polygon_beta = None
 		self.selreg_current_line = None
+		self.cursor_text = None
 		
 		#These variables will contain thresholding information
 		self.mask_threshold = None
@@ -151,7 +152,7 @@ class coffeegrindsize_GUI:
 		
 		#Size in pixels of the canvas where the pictures and figures will be displayed
 		self.canvas_width = 1000
-		self.canvas_height = 780
+		self.canvas_height = int(self.master.winfo_screenheight()*0.9-165)#780
 		
 		#Set the last image position memory to its default center
 		self.last_image_x = self.canvas_width/2
@@ -182,7 +183,7 @@ class coffeegrindsize_GUI:
 		# === Build the adjustable keyword options ===
 		
 		#This adds a vertical spacing in the options frame
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to image scale
 		self.label_title("Physical Scale of the Image:")
@@ -198,8 +199,7 @@ class coffeegrindsize_GUI:
 		self.pixel_length_id.config(state=DISABLED)
 		
 		#Angle of selection
-		self.physical_angle_var, self.physical_angle_id = self.label_entry("None", "Angle of Reference Line:", "deg", entry_id=True)
-		self.physical_angle_id.config(state=DISABLED)
+		self.physical_angle_var = StringVar()
 		
 		#Provide a menu of reference objects
 		self.reference_object = self.dropdown_entry("Reference Object:", list(reference_objects_dict.keys()), self.change_reference_object)
@@ -208,7 +208,7 @@ class coffeegrindsize_GUI:
 		#For now this needs to be input manually
 		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm")
 		
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to image thresholding
 		self.label_title("Threshold Step:")
@@ -216,7 +216,7 @@ class coffeegrindsize_GUI:
 		#Value of fractional threshold in units of flux in the blue channel of the image
 		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%")
 		
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to particle detection
 		self.label_title("Particle Detection Step:")
@@ -249,7 +249,7 @@ class coffeegrindsize_GUI:
 		
 		self.options_row += 1
 		
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
@@ -310,7 +310,7 @@ class coffeegrindsize_GUI:
 		#By default this option is disabled
 		self.nbins_var_id.config(state=DISABLED)
 		
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to saving output data
 		self.label_title("Output Options:")
@@ -328,7 +328,7 @@ class coffeegrindsize_GUI:
 		#The base of the output file names
 		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
 		
-		self.label_separator()
+		#self.label_separator()
 		
 		#All options related to image display
 		self.label_title("Display Options:")
@@ -352,36 +352,17 @@ class coffeegrindsize_GUI:
 		self.reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
 		self.options_row += 1
 		
-		#Add a few horizontal spaces
-		#for i in range(4):
-		self.label_separator()
-		
 		#Button for resetting all options to default
 		reset_params_button = Button(self.frame_options, text="Reset All Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row, column=1, columnspan=2, sticky=E)
 		
-		# === Create a canvas to display images and figures ===
-		
-		#Initialize the image canvas
-		image_canvas_bg = "gray40"
-		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
-		self.image_canvas.grid(row=0, column=3, rowspan=145, sticky=N)
-		
-		#Prevent the image canvas to shrink when labels are placed in it
-		self.image_canvas.pack_propagate(0)
-		
-		#Set focus on image canvas
-		self.image_canvas.focus_set()
-		
-		#Display a label when no image was loaded
-		self.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 18 bold', width=self.canvas_width, height=self.canvas_height)
-		self.noimage_label.pack(side=LEFT)
+		# === Create a frame to display some stats ===
 		
 		frame_stats_bg = "gray60"
 		self.frame_stats = Frame(self.frame_options, bg=frame_stats_bg, padx=2, pady=10)
-		self.frame_stats.grid(row=33, column=3, sticky=NW, rowspan=10)
+		self.frame_stats.grid(row=0, column=3, sticky="new", rowspan=10)
 		
-		title_label = Label(self.frame_stats, text="Properties of the Particle Distribution:", font='Helvetica 18 bold', bg=frame_stats_bg)
+		title_label = Label(self.frame_stats, text="Properties of the Particle Distribution:", font='Helvetica 16 bold', bg=frame_stats_bg)
 		title_label.grid(row=0, sticky=W, padx=self.title_padx, columnspan=12)
 		
 		stats_colsep_width = 3
@@ -481,6 +462,23 @@ class coffeegrindsize_GUI:
 		eff_entry.grid(row=stats_row, column=stats_column+1)
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		# === Create a canvas to display images and figures ===
+		
+		#Initialize the image canvas
+		image_canvas_bg = "gray40"
+		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
+		self.image_canvas.grid(row=4, column=3, rowspan=145, sticky=N)
+		
+		#Prevent the image canvas to shrink when labels are placed in it
+		self.image_canvas.pack_propagate(0)
+		
+		#Set focus on image canvas
+		self.image_canvas.focus_set()
+		
+		#Display a label when no image was loaded
+		self.noimage_label = Label(self.image_canvas, text="No Image Loaded", anchor=CENTER, bg=image_canvas_bg, font='Helvetica 22 bold', width=self.canvas_width, height=self.canvas_height)
+		self.noimage_label.pack(side=LEFT)
 		
 		# === Populate the toolbar with buttons for analysis ===
 		
@@ -583,8 +581,8 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind("<B1-Motion>", self.move_move)
 		
 		#Set up key bindings for drawing a line
-		self.image_canvas.bind("<ButtonPress-2>", self.line_start)
-		self.image_canvas.bind("<B2-Motion>", self.line_move)
+		#self.image_canvas.bind("<ButtonPress-2>", self.line_start)
+		#self.image_canvas.bind("<B2-Motion>", self.line_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
 		self.image_canvas.bind_all("i", self.zoom_in)
@@ -983,7 +981,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to display a title for option groups
 	def label_title(self, text):
-		title_label = Label(self.frame_options, text=text, font='Helvetica 18 bold')
+		title_label = Label(self.frame_options, text=text, font='Helvetica 16 bold')
 		title_label.grid(row=self.options_row, sticky=W, padx=self.title_padx, columnspan=2)
 		self.options_row += 1
 	
@@ -1207,6 +1205,10 @@ class coffeegrindsize_GUI:
 		#Set the focus back on canvas
 		self.image_canvas.focus_set()
 		
+		#Delete current text
+		if self.cursor_text is not None:
+			self.image_canvas.delete(self.cursor_text)
+		
 		#In histogram mode, do nothing
 		if self.display_type.get() == histogram_image_display_name:
 			return
@@ -1220,8 +1222,7 @@ class coffeegrindsize_GUI:
 			#Set the current point for the red line
 			self.line_move(event)
 			
-			#Redraw image (TMP is this needed !!)
-			#self.redraw(x=self.last_image_x, y=self.last_image_y)
+			self.cursor_text = self.image_canvas.create_text(self.mouse_x+10, self.mouse_y+10, anchor=W, font="Helvetica 14", text=self.physical_angle_var.get()+"°", fill="red")
 		
 		#In analysis selection region mode, show the next line
 		if self.mouse_click_mode == "SELECT_REGION":
