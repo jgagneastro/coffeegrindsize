@@ -152,7 +152,7 @@ class coffeegrindsize_GUI:
 		
 		#Size in pixels of the canvas where the pictures and figures will be displayed
 		self.canvas_width = 1000
-		self.canvas_height = int(self.master.winfo_screenheight()*0.9-165)#780
+		self.canvas_height = int(self.master.winfo_screenheight()*0.9-165)
 		
 		#Set the last image position memory to its default center
 		self.last_image_x = self.canvas_width/2
@@ -1478,7 +1478,7 @@ class coffeegrindsize_GUI:
 		#Do not delete
 		#Invoke a file dialog to select image
 		#image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
-		image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("all files","*.*")))
+		image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("jpeg files","*.jpg"),("jpeg files","*.jpeg"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
