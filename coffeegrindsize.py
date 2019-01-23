@@ -254,9 +254,10 @@ class coffeegrindsize_GUI:
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
 		
-		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Attainable mass vs Diameter", "Attainable mass vs Surface", "Attainable mass vs Volume", "Extracted mass vs Diameter", "Extracted mass vs Surface", "Extracted mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume", "Extraction Yield Distribution"]
+		self.default_histogram_choice = 10
+		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Available mass vs Diameter", "Available mass vs Surface", "Available mass vs Volume", "Extracted mass vs Diameter", "Extracted mass vs Surface", "Extracted mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume", "Extraction Yield Distribution"]
 		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
-		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type)
+		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type, default_choice_index=self.default_histogram_choice)
 		
 		self.legend_choices = ["Best", "Upper Right", "Upper Left", "Lower Right", "Lower Left", "Center Right", "Center Left", "Lower Center", "Upper Center", "Right", "Center"]
 		self.legend_type = self.dropdown_entry("Label Position:", self.legend_choices, self.change_histogram_type)
@@ -1377,7 +1378,7 @@ class coffeegrindsize_GUI:
 		self.min_surface_var.set(str(def_min_surface))
 		self.min_roundness_var.set(str(def_min_roundness))
 		self.quick_var.set(0)
-		self.histogram_type.set(self.hist_choices[0])
+		self.histogram_type.set(self.hist_choices[self.default_histogram_choice])
 		self.xmin_var.set(str(def_min_x_axis))
 		self.xmax_var.set(str(def_max_x_axis))
 		self.xlog_var.set(1)
@@ -2220,9 +2221,9 @@ class coffeegrindsize_GUI:
 			self.ylabel = "Total Mass Fraction"
 			density = True
 			
-		if "Attainable mass vs" in self.histogram_type.get():
+		if "Available mass vs" in self.histogram_type.get():
 			data_weights = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
-			self.ylabel = "Attainable Mass Fraction"
+			self.ylabel = "Available Mass Fraction"
 			density = True
 			
 		if ("Extracted mass vs" in self.histogram_type.get()) or ("Extraction Yield Distribution" in self.histogram_type.get()):
