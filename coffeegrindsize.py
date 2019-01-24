@@ -27,14 +27,20 @@ stop = pdb.set_trace
 
 # === Default Parameters for analysis and plotting ===
 
+#Whether or not to display advanced options
+def_display_advanced_options = False
+
 #Threshold to select reference dark pixel
-def_reference_threshold = 0.1
+#def_reference_threshold = 0.1 #First version (too agressive)
+def_reference_threshold = 0.4 #Second version (seems better on Lido and Forte images)
 
 #Smoothing along path to reference pixel
 nsmooth = 3 #Not accessible yet in the GUI
 
 #Maximum cost for disjoint particles
-def_maxcost = 0.07
+#def_maxcost = 0.07 #First version (too agressive)
+#def_maxcost = 0.2 #Second version (seems better on Lido and Forte images)
+def_maxcost = 0.35 #Third version (seems much better on Lido and Forte images)
 
 #Default value for image thresholding (%)
 def_threshold = 58.8
@@ -158,6 +164,11 @@ class coffeegrindsize_GUI:
 		self.last_image_x = self.canvas_width/2
 		self.last_image_y = self.canvas_height/2
 		
+		#Advanced options
+		self.display_advanced_options = def_display_advanced_options
+		self.reference_threshold_var = None
+		self.maxcost_var = None
+		
 		#Set the window title
 		self.master.title("Coffee Particle Size Distribution by Jonathan Gagne")
 		
@@ -232,14 +243,20 @@ class coffeegrindsize_GUI:
 		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
 		
 		#Threshold to select pixels dark enough to serve as a reference in the cost function in the cluster breakup step
-		#self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "")
-		self.reference_threshold_var = StringVar()
-		self.reference_threshold_var.set(str(def_reference_threshold))
+		if self.display_advanced_options is True:
+			self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "")
+		else:
+			if self.reference_threshold_var is None:
+				self.reference_threshold_var = StringVar()
+				self.reference_threshold_var.set(str(def_reference_threshold))
 		
 		#Maximum cost in the cluster breakup step
-		#self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "")
-		self.maxcost_var = StringVar()
-		self.maxcost_var.set(str(def_maxcost))
+		if self.display_advanced_options is True:
+			self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "")
+		else:
+			if self.maxcost_var is None:
+				self.maxcost_var = StringVar()
+				self.maxcost_var.set(str(def_maxcost))
 		
 		#Whether the Particle Detection step should be quick and approximate
 		self.quick_var = IntVar()
@@ -254,9 +271,12 @@ class coffeegrindsize_GUI:
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
 		
-		self.default_histogram_choice = 10
-		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Available mass vs Diameter", "Available mass vs Surface", "Available mass vs Volume", "Extracted mass vs Diameter", "Extracted mass vs Surface", "Extracted mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume", "Extraction Yield Distribution"]
-		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
+		#self.default_histogram_choice = 10
+		#self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Available mass vs Diameter", "Available mass vs Surface", "Available mass vs Volume", "Extracted mass vs Diameter", "Extracted mass vs Surface", "Extracted mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume", "Extraction Yield Distribution"]
+		#self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
+		self.default_histogram_choice = 7
+		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Available mass vs Diameter", "Available mass vs Surface", "Available mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume"]
+		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "surf_diam", "surf_surf", "surf_vol"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type, default_choice_index=self.default_histogram_choice)
 		
 		self.legend_choices = ["Best", "Upper Right", "Upper Left", "Lower Right", "Lower Left", "Center Right", "Center Left", "Lower Center", "Upper Center", "Right", "Center"]
@@ -419,33 +439,33 @@ class coffeegrindsize_GUI:
 		unit_label = Label(self.frame_stats, text="(mm²)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
-		stats_column += 3
-		stats_row =1
+		# stats_column += 3
+		# stats_row =1
 		
-		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
-		separator_label.grid(row=stats_row, column=stats_column)
+		# separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
+		# separator_label.grid(row=stats_row, column=stats_column)
 		
-		stats_column += 1
+		# stats_column += 1
 		
-		self.ey_average_var = StringVar()
-		self.ey_average_var.set("None")
-		ey_average_label = Label(self.frame_stats, text="Average EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
-		ey_average_label.grid(row=stats_row, sticky=E, column=stats_column)
-		ey_average_entry = Label(self.frame_stats, textvariable=self.ey_average_var, width=stats_entry_width, bg=frame_stats_bg)
-		ey_average_entry.grid(row=stats_row, column=stats_column+1)
-		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
-		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		# self.ey_average_var = StringVar()
+		# self.ey_average_var.set("None")
+		# ey_average_label = Label(self.frame_stats, text="Average EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		# ey_average_label.grid(row=stats_row, sticky=E, column=stats_column)
+		# ey_average_entry = Label(self.frame_stats, textvariable=self.ey_average_var, width=stats_entry_width, bg=frame_stats_bg)
+		# ey_average_entry.grid(row=stats_row, column=stats_column+1)
+		# unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
-		stats_row += 1
+		# stats_row += 1
 		
-		self.ey_stddev_var = StringVar()
-		self.ey_stddev_var.set("None")
-		ey_stddev_label = Label(self.frame_stats, text="Scatter in EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
-		ey_stddev_label.grid(row=stats_row, sticky=E, column=stats_column)
-		ey_stddev_entry = Label(self.frame_stats, textvariable=self.ey_stddev_var, width=stats_entry_width, bg=frame_stats_bg)
-		ey_stddev_entry.grid(row=stats_row, column=stats_column+1)
-		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
-		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		# self.ey_stddev_var = StringVar()
+		# self.ey_stddev_var.set("None")
+		# ey_stddev_label = Label(self.frame_stats, text="Scatter in EY:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		# ey_stddev_label.grid(row=stats_row, sticky=E, column=stats_column)
+		# ey_stddev_entry = Label(self.frame_stats, textvariable=self.ey_stddev_var, width=stats_entry_width, bg=frame_stats_bg)
+		# ey_stddev_entry.grid(row=stats_row, column=stats_column+1)
+		# unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		stats_column += 3
 		stats_row =1
@@ -562,6 +582,7 @@ class coffeegrindsize_GUI:
 		
 		#Add an option to downsample images
 		subMenu.add_command(label="Reduce Image Quality...", command=self.downsample_image)
+		#subMenu.add_command(label="Toggle Advanced Options...", command=self.toggle_advanced_options)
 		subMenu.add_separator()
 		
 		#Add an option for debugging
@@ -1411,6 +1432,15 @@ class coffeegrindsize_GUI:
 		#Update root to avoid problems with file dialog
 		self.master.update()
 	
+	#Method to toggle advanced options
+	def toggle_advanced_options(self):
+		if self.display_advanced_options is False:
+			self.display_advanced_options = True
+		else:
+			self.display_advanced_options = False
+		print(self.display_advanced_options)
+		self.frame_options.refresh()
+	
 	#Method to downsample an image
 	def downsample_image(self):
 		
@@ -2206,31 +2236,31 @@ class coffeegrindsize_GUI:
 		#If Y data is the number of particles
 		if "Number vs" in self.histogram_type.get():
 			data_weights = np.full(source.nclusters, 1)
-			density = False
-			self.ylabel = "Number of Particles"
+			density = True
+			self.ylabel = "Fraction of Particles"
 		
 		#If Y data is the surface
 		if "Surface vs" in self.histogram_type.get():
 			data_weights = source.clusters_surface
 			density = True
-			self.ylabel = "Total Surface Fraction"
+			self.ylabel = "Fraction of Total Surface"
 			
 		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
 		if "Mass vs" in self.histogram_type.get():
 			data_weights = source.clusters_volume
-			self.ylabel = "Total Mass Fraction"
+			self.ylabel = "Fraction of Total Mass"
 			density = True
 			
 		if "Available mass vs" in self.histogram_type.get():
 			data_weights = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
-			self.ylabel = "Available Mass Fraction"
+			self.ylabel = "Fraction of Available Mass"
 			density = True
 			
 		if ("Extracted mass vs" in self.histogram_type.get()) or ("Extraction Yield Distribution" in self.histogram_type.get()):
 			reachable_vol = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
 			ey = self.ey_simulate(source.clusters_surface/pixel_scale**2)*100
 			data_weights = reachable_vol*ey
-			self.ylabel = "Extracted Mass Fraction"
+			self.ylabel = "Fraction of Extracted Mass"
 			density = True
 		
 		#If weights are still empty then the selection was not recognized
@@ -2430,8 +2460,8 @@ class coffeegrindsize_GUI:
 		self.surf_average_var.set(surfaces_average_str)
 		self.surf_stddev_var.set(surfaces_stddev_str)
 		
-		self.ey_average_var.set(eys_average_str)
-		self.ey_stddev_var.set(eys_stddev_str)
+		#self.ey_average_var.set(eys_average_str)
+		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
 		
