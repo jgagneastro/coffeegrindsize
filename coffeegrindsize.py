@@ -504,7 +504,7 @@ class coffeegrindsize_GUI:
 		# === Populate the toolbar with buttons for analysis ===
 		
 		#Button to open an image of the coffee grounds picture
-		open_image_button = Button(toolbar, text="Open Image", command=self.open_image, highlightbackground=toolbar_bg)
+		open_image_button = Button(toolbar, text="Open Image", command=lambda: self.open_image(None), highlightbackground=toolbar_bg)
 		open_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to select a reference object
@@ -516,11 +516,11 @@ class coffeegrindsize_GUI:
 		region_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to apply image threshold
-		threshold_image_button = Button(toolbar, text="Threshold Image", command=self.threshold_image, highlightbackground=toolbar_bg)
+		threshold_image_button = Button(toolbar, text="Threshold Image", command=lambda: self.threshold_image(None), highlightbackground=toolbar_bg)
 		threshold_image_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to launch the particle detection analysis
-		psd_button = Button(toolbar, text="Launch Particle Detection", command=self.launch_psd,highlightbackground=toolbar_bg)
+		psd_button = Button(toolbar, text="Launch Particle Detection", command=lambda: self.launch_psd(None),highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to display histogram figures
@@ -537,11 +537,11 @@ class coffeegrindsize_GUI:
 		downsample_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to load data from disk
-		load_data_button = Button(toolbar2, text="Load Data", command=self.load_data, highlightbackground=toolbar_bg)
+		load_data_button = Button(toolbar2, text="Load Data", command=lambda: self.load_data(None), highlightbackground=toolbar_bg)
 		load_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to load comparison data from disk
-		load_comparison_data_button = Button(toolbar2, text="Load Comparison Data", command=self.load_comparison_data, highlightbackground=toolbar_bg)
+		load_comparison_data_button = Button(toolbar2, text="Load Comparison Data", command=lambda: self.load_comparison_data(None), highlightbackground=toolbar_bg)
 		load_comparison_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to flush comparison data
@@ -549,11 +549,11 @@ class coffeegrindsize_GUI:
 		flush_comparison_data_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to output data to the disk
-		save_button = Button(toolbar2, text="Save Data", command=self.save_data, highlightbackground=toolbar_bg)
+		save_button = Button(toolbar2, text="Save Data", command=lambda: self.save_data(None), highlightbackground=toolbar_bg)
 		save_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to save histogram to disk
-		savehist_button = Button(toolbar2, text="Save View", command=self.save_histogram, highlightbackground=toolbar_bg)
+		savehist_button = Button(toolbar2, text="Save View", command=lambda: self.save_histogram(None), highlightbackground=toolbar_bg)
 		savehist_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Quit button
@@ -577,7 +577,7 @@ class coffeegrindsize_GUI:
 		menu.add_cascade(label="File", menu=subMenu)
 		
 		#Add an option to open images from disk
-		subMenu.add_command(label="Open Image...", command=self.open_image)
+		subMenu.add_command(label="Open Image...", command=lambda: self.open_image(None))
 		subMenu.add_separator()
 		
 		#Add an option to downsample images
@@ -610,9 +610,17 @@ class coffeegrindsize_GUI:
 		self.image_canvas.bind_all("i", self.zoom_in)
 		self.image_canvas.bind_all("o", self.zoom_out)
 		
-		self.image_canvas.bind_all("s", self.select_region)
-		
+		#Various shortcuts
+		self.image_canvas.bind_all("m", self.open_image)
 		self.image_canvas.bind_all("r", self.select_reference_object_mouse)
+		self.image_canvas.bind_all("a", self.select_region)
+		self.image_canvas.bind_all("t", self.threshold_image)
+		self.image_canvas.bind_all("p", self.launch_psd)
+		self.image_canvas.bind_all("h", self.create_histogram)
+		self.image_canvas.bind_all("s", self.save_data)
+		self.image_canvas.bind_all("l", self.load_data)
+		self.image_canvas.bind_all("c", self.load_comparison_data)
+		self.image_canvas.bind_all("v", self.save_histogram)
 		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("q", self.quit_region_select)
@@ -1495,7 +1503,7 @@ class coffeegrindsize_GUI:
 		self.pixel_scale_var.set(None)
 	
 	#Method to open an image from the disk
-	def open_image(self):
+	def open_image(self, event):
 		
 		#Delete all currently drawn lines
 		self.image_canvas.delete(self.image_canvas.find_withtag("line"))
@@ -1551,7 +1559,7 @@ class coffeegrindsize_GUI:
 			self.master.update()
 	
 	#Method to apply image threshold
-	def threshold_image(self):
+	def threshold_image(self, event):
 		
 		#Verify that an image was loaded
 		if self.img_source is None:
@@ -1735,7 +1743,7 @@ class coffeegrindsize_GUI:
 		return extractions
 	
 	#Method to launch particle detection analysis
-	def launch_psd(self):
+	def launch_psd(self, event):
 		
 		#Verify that an image was thresholded
 		if self.mask_threshold is None:
@@ -2230,38 +2238,32 @@ class coffeegrindsize_GUI:
 		
 		#Initiate empty data
 		data_weights = None
-		density = False
 		self.ylabel = None
 		
 		#If Y data is the number of particles
 		if "Number vs" in self.histogram_type.get():
 			data_weights = np.full(source.nclusters, 1)
-			density = True
 			self.ylabel = "Fraction of Particles"
 		
 		#If Y data is the surface
 		if "Surface vs" in self.histogram_type.get():
 			data_weights = source.clusters_surface
-			density = True
 			self.ylabel = "Fraction of Total Surface"
 			
 		#If Y data is the mass (proportional to volume because we assume all particles have the same mass density)
 		if "Mass vs" in self.histogram_type.get():
 			data_weights = source.clusters_volume
 			self.ylabel = "Fraction of Total Mass"
-			density = True
 			
 		if "Available mass vs" in self.histogram_type.get():
 			data_weights = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
 			self.ylabel = "Fraction of Available Mass"
-			density = True
 			
 		if ("Extracted mass vs" in self.histogram_type.get()) or ("Extraction Yield Distribution" in self.histogram_type.get()):
 			reachable_vol = self.attainable_mass_simulate(source.clusters_volume/pixel_scale**3)
 			ey = self.ey_simulate(source.clusters_surface/pixel_scale**2)*100
 			data_weights = reachable_vol*ey
 			self.ylabel = "Fraction of Extracted Mass"
-			density = True
 		
 		#If weights are still empty then the selection was not recognized
 		if data_weights is None:
@@ -2320,7 +2322,7 @@ class coffeegrindsize_GUI:
 		
 		#Plot the histogram
 		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
-		ypdf, xpdfleft, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights, density=density, lw=2, rwidth=.8)
+		ypdf, xpdfleft, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights/np.nansum(data_weights), density=False, lw=2, rwidth=.8)
 		
 		#Find the value for the center of each bin
 		xpdf = xpdfleft[0:-1] + np.diff(xpdfleft)/2.0
@@ -2577,7 +2579,7 @@ class coffeegrindsize_GUI:
 		self.master.update()
 	
 	#Method to load data from disk
-	def load_data(self):
+	def load_data(self, event):
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
@@ -2604,7 +2606,7 @@ class coffeegrindsize_GUI:
 		self.create_histogram(None)
 		
 	#Method to load comparison data from disk
-	def load_comparison_data(self):
+	def load_comparison_data(self, event):
 		
 		#Update root to avoid problems with file dialog
 		self.master.update()
@@ -2659,7 +2661,7 @@ class coffeegrindsize_GUI:
 		self.status_var.set("Comparison Data Flushed from Memory...")
 		
 	#Method to save data to disk
-	def save_data(self):
+	def save_data(self, event):
 		
 		#Verify if PSD analysis was done
 		if self.cluster_data is None:
@@ -2702,7 +2704,7 @@ class coffeegrindsize_GUI:
 		self.master.update()
 	
 	#Method to save figure to disk
-	def save_histogram(self):
+	def save_histogram(self, event):
 		
 		#Verify that a figure exists
 		if self.img is None:
@@ -2765,85 +2767,6 @@ class coffeegrindsize_GUI:
 	#Method to display help
 	def launch_help(self):
 		webbrowser.open("https://www.dropbox.com/s/m2af0aer2e17xie/coffee_grind_size_manual.pdf?dl=0")
-	
-	def view_statistics(self):
-		
-		#Define some padding parameters
-		xpad = 20
-		ypad = 1
-		current_row = 0
-		
-		#Create a popup help window
-		help_window = Toplevel()
-		
-		#Create a frame for the text
-		help_frame = Frame(help_window, width=400, height=300)
-		help_frame.pack()
-		
-		#Prevent the frame to shrink when labels are placed in it
-		#help_frame.grid_propagate(False)
-		
-		#Set the window title
-		help_window.title = "Help"# - Coffee Particle Size Distribution by Jonathan Gagne"
-		
-		#Set a vertical space
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		#Display title
-		title_label = Label(help_frame, text="Help - Coffee Particle Size Distribution", font='Helvetica 18 bold', padx=xpad, pady=ypad)
-		title_label.grid(row=current_row)
-		current_row += 1
-		
-		#Display text
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		t1_label = Label(help_frame,text="This program is intended to measure the size distribution of coffee grounds from a picture \ntaken on a white background.", padx=xpad, pady=ypad, justify=LEFT)
-		t1_label.grid(column=0, row=current_row, sticky=W)
-		current_row += 1
-		
-		#Display subtitle
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		subtitle_label = Label(help_frame, text="Image Thresholding", font='Helvetica 16 bold', padx=xpad, pady=ypad)
-		subtitle_label.grid(row=current_row, sticky=W)
-		current_row += 1
-		
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		#Display more text
-		t2_label = Label(help_frame, text="The first step after loading an image is to threshold it. The program will use the blue channel \nof the color image because coffee grinds tend to be brown, which is very faint in the blue \nchannel, therefore increasing contrast with the white background. A reference for the white \nbackground will be determined from the median value of the image, and all pixels darker than \nthe threshold fraction of the white background will be grouped as potential coffee grounds.", padx=xpad, pady=ypad, justify=LEFT)
-		t2_label.grid(column=0, row=current_row, sticky=W)
-		current_row += 1
-		
-		#Display subtitle
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		subtitle_label = Label(help_frame, text="Particle Detection", font='Helvetica 16 bold', padx=xpad, pady=ypad)
-		subtitle_label.grid(row=current_row, sticky=W)
-		current_row += 1
-		
-		separator_label = Label(help_frame, text="")
-		separator_label.grid(row=current_row)
-		current_row += 1
-		
-		#Display more text
-		t2_label = Label(help_frame, text="The program will first order all thresholded pixels from the darkest to the brightest, and will \nstart working with the darkest ones first because they are more likely to be near the core of \na coffee particle. It will then start from one pixel and use it as the seed of a cluster. Any \nimmediately adjacent pixel that is also thresholded will be included in the cluster, and the \nones adjacent to them will also be included until no thresholded pixels touch the current \ncluster. Once a cluster is completed, various steps will be taken to determine whether it is \nvalid [MORE].", padx=xpad, pady=ypad, justify=LEFT)
-		t2_label.grid(column=0, row=current_row, sticky=W)
-		current_row += 1
-		
-		#Quit button
-		quit_button = Button(help_frame, text="Quit", padx=20, pady=20, command=lambda : help_window.destroy())
-		quit_button.grid(row=current_row, column=0)
 
 # === Main loop and call to the user interface window ===
 
