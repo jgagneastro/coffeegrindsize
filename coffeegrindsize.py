@@ -487,7 +487,7 @@ class coffeegrindsize_GUI:
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
-		stats_row += 1
+		# stats_row += 1
 		
 		# self.q_var = StringVar()
 		# self.q_var.set("None")
@@ -495,7 +495,7 @@ class coffeegrindsize_GUI:
 		# eff_label.grid(row=stats_row, sticky=E, column=stats_column)
 		# eff_entry = Label(self.frame_stats, textvariable=self.q_var, width=stats_entry_width, bg=frame_stats_bg)
 		# eff_entry.grid(row=stats_row, column=stats_column+1)
-		# unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		# unit_label = Label(self.frame_stats, text="", bg=frame_stats_bg)
 		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		# === Create a canvas to display images and figures ===
@@ -2455,6 +2455,7 @@ class coffeegrindsize_GUI:
 		weights = np.maximum(np.ceil(attainable_masses/(coffee_cell_size/1e3)**3),1)
 		surfaces_average = np.sum(surfaces*weights)/np.sum(weights)
 		surfaces_stddev = self.weighted_stddev(surfaces,weights,frequency=True,unbiased=True)
+		quality = surfaces_average/surfaces_stddev
 		
 		#volumes_average = np.mean(volumes)
 		#volumes_stddev = np.std(volumes)
@@ -2478,6 +2479,7 @@ class coffeegrindsize_GUI:
 		eys_stddev_str = "{0:.{1}f}".format(eys_stddev, 1)
 		
 		effs_average_str = "{0:.{1}f}".format(effs_average, 1)
+		q_str = "{0:.{1}f}".format(quality, 2)
 		
 		self.diam_average_var.set(diameters_average_str)
 		self.diam_stddev_var.set(diameters_stddev_str)
@@ -2489,6 +2491,7 @@ class coffeegrindsize_GUI:
 		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
+		self.q_var.set(q_str)
 		
 	#Method to create histogram
 	def create_histogram(self, event):
