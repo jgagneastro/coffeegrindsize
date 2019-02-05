@@ -1518,7 +1518,8 @@ class coffeegrindsize_GUI:
 		self.physical_length_var.set(None)
 		self.physical_angle_var.set(None)
 		self.pixel_scale_var.set(None)
-	
+		self.reference_object.set("Custom")
+		
 	#Method to open an image from the disk
 	def open_image(self, event):
 		
