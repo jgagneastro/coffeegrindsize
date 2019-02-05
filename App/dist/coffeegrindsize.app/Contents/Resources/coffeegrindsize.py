@@ -634,8 +634,8 @@ class coffeegrindsize_GUI:
 		self.master.bind_all("<Command-h>", self.create_histogram)
 		self.master.bind_all("<Command-s>", self.save_data)
 		self.master.bind_all("<Command-l>", self.load_data)
-		self.master.bind_all("<Command-c>", self.load_comparison_data)
-		self.master.bind_all("<Command-v>", self.save_histogram)
+		self.master.bind_all("<Control-c>", self.load_comparison_data)
+		self.master.bind_all("<Control-v>", self.save_histogram)
 		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("<Escape>", self.quit_region_select)
@@ -2491,7 +2491,7 @@ class coffeegrindsize_GUI:
 		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
-		self.q_var.set(q_str)
+		#self.q_var.set(q_str)
 		
 	#Method to create histogram
 	def create_histogram(self, event):
