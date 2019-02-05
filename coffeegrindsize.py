@@ -607,23 +607,26 @@ class coffeegrindsize_GUI:
 		#self.image_canvas.bind("<B2-Motion>", self.line_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
-		self.image_canvas.bind_all("i", self.zoom_in)
-		self.image_canvas.bind_all("o", self.zoom_out)
+		#self.image_canvas.bind_all("<Command-i>", self.zoom_in)
+		self.image_canvas.bind_all("<Command-i>", self.zoom_in)
+		self.image_canvas.bind_all("<Command-o>", self.zoom_out
+			)
 		
 		#Various shortcuts
-		self.image_canvas.bind_all("m", self.open_image)
-		self.image_canvas.bind_all("r", self.select_reference_object_mouse)
-		self.image_canvas.bind_all("a", self.select_region)
-		self.image_canvas.bind_all("t", self.threshold_image)
-		self.image_canvas.bind_all("p", self.launch_psd)
-		self.image_canvas.bind_all("h", self.create_histogram)
-		self.image_canvas.bind_all("s", self.save_data)
-		self.image_canvas.bind_all("l", self.load_data)
-		self.image_canvas.bind_all("c", self.load_comparison_data)
-		self.image_canvas.bind_all("v", self.save_histogram)
+		self.master.bind_all("<Command-m>", self.open_image)
+		self.master.bind_all("<Command-r>", self.select_reference_object_mouse)
+		self.master.bind_all("<Command-a>", self.select_region)
+		self.master.bind_all("<Command-t>", self.threshold_image)
+		self.master.bind_all("<Command-p>", self.launch_psd)
+		self.master.bind_all("<Command-h>", self.create_histogram)
+		self.master.bind_all("<Command-s>", self.save_data)
+		self.master.bind_all("<Command-l>", self.load_data)
+		self.master.bind_all("<Command-c>", self.load_comparison_data)
+		self.master.bind_all("<Command-v>", self.save_histogram)
 		
 		#Set up key binding for data analysis selection quit
-		self.image_canvas.bind_all("q", self.quit_region_select)
+		self.image_canvas.bind_all("<Escape>", self.quit_region_select)
+		self.image_canvas.bind_all("<Return>", self.quit_region_select)
 	
 	#Method to refresh histograms when xlog is toggled
 	def xlog_event(self):
@@ -1233,7 +1236,7 @@ class coffeegrindsize_GUI:
 	def motion(self, event):
 		
 		#Set the focus back on canvas
-		self.image_canvas.focus_set()
+		#self.image_canvas.focus_set()
 		
 		#Delete current text
 		if self.cursor_text is not None:
@@ -2762,7 +2765,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to quit user interface
 	def quit_gui(self):
-		root.destroy()
+		root.quit()
 	
 	#Method to display help
 	def launch_help(self):
@@ -2783,3 +2786,5 @@ while True:
 		break
 	except UnicodeDecodeError:
 		pass
+	#except:
+	#	pdb.set_trace()
