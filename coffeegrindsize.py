@@ -2491,7 +2491,7 @@ class coffeegrindsize_GUI:
 		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
-		self.q_var.set(q_str)
+		#self.q_var.set(q_str)
 		
 	#Method to create histogram
 	def create_histogram(self, event):
