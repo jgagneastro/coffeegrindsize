@@ -63,6 +63,9 @@ def_min_roundness = 0
 def_min_x_axis = 0.01
 def_max_x_axis = 10
 
+#Default coffee cell size estimate in microns
+coffee_cell_size = 20.
+
 #Default name for the session (used for output filenames)
 def_session_name = "PSD_"+time.strftime("%Y%m%d_%Hh%Mm%Ss")
 
@@ -76,7 +79,7 @@ default_log_binsize = 0.05
 default_binsize = 0.1
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91, "2 Euros":25.75, "1 Euro":23.25, "50 Euro Cents":24.25, "20 Euro Cents":22.25}
+reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91, "US Penny":19.05, "2 Euros":25.75, "1 Euro":23.25, "50 Euro Cents":24.25, "20 Euro Cents":22.25}
 
 #Default output directory
 def_output_dir = os.path.expanduser("~")
@@ -468,7 +471,7 @@ class coffeegrindsize_GUI:
 		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		stats_column += 3
-		stats_row =1
+		stats_row = 1
 		
 		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
 		separator_label.grid(row=stats_row, column=stats_column)
@@ -483,6 +486,17 @@ class coffeegrindsize_GUI:
 		eff_entry.grid(row=stats_row, column=stats_column+1)
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		# stats_row += 1
+		
+		# self.q_var = StringVar()
+		# self.q_var.set("None")
+		# eff_label = Label(self.frame_stats, text="Quality:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		# eff_label.grid(row=stats_row, sticky=E, column=stats_column)
+		# eff_entry = Label(self.frame_stats, textvariable=self.q_var, width=stats_entry_width, bg=frame_stats_bg)
+		# eff_entry.grid(row=stats_row, column=stats_column+1)
+		# unit_label = Label(self.frame_stats, text="", bg=frame_stats_bg)
+		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		# === Create a canvas to display images and figures ===
 		
@@ -607,23 +621,25 @@ class coffeegrindsize_GUI:
 		#self.image_canvas.bind("<B2-Motion>", self.line_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
-		self.image_canvas.bind_all("i", self.zoom_in)
-		self.image_canvas.bind_all("o", self.zoom_out)
+		self.image_canvas.bind_all("<Command-i>", self.zoom_in)
+		self.image_canvas.bind_all("<Command-o>", self.zoom_out
+			)
 		
 		#Various shortcuts
-		self.image_canvas.bind_all("m", self.open_image)
-		self.image_canvas.bind_all("r", self.select_reference_object_mouse)
-		self.image_canvas.bind_all("a", self.select_region)
-		self.image_canvas.bind_all("t", self.threshold_image)
-		self.image_canvas.bind_all("p", self.launch_psd)
-		self.image_canvas.bind_all("h", self.create_histogram)
-		self.image_canvas.bind_all("s", self.save_data)
-		self.image_canvas.bind_all("l", self.load_data)
-		self.image_canvas.bind_all("c", self.load_comparison_data)
-		self.image_canvas.bind_all("v", self.save_histogram)
+		self.master.bind_all("<Command-m>", self.open_image)
+		self.master.bind_all("<Command-r>", self.select_reference_object_mouse)
+		self.master.bind_all("<Command-a>", self.select_region)
+		self.master.bind_all("<Command-t>", self.threshold_image)
+		self.master.bind_all("<Command-p>", self.launch_psd)
+		self.master.bind_all("<Command-h>", self.create_histogram)
+		self.master.bind_all("<Command-s>", self.save_data)
+		self.master.bind_all("<Command-l>", self.load_data)
+		self.master.bind_all("<Command-c>", self.load_comparison_data)
+		self.master.bind_all("<Command-v>", self.save_histogram)
 		
 		#Set up key binding for data analysis selection quit
-		self.image_canvas.bind_all("q", self.quit_region_select)
+		self.image_canvas.bind_all("<Escape>", self.quit_region_select)
+		self.image_canvas.bind_all("<Return>", self.quit_region_select)
 	
 	#Method to refresh histograms when xlog is toggled
 	def xlog_event(self):
@@ -1233,7 +1249,7 @@ class coffeegrindsize_GUI:
 	def motion(self, event):
 		
 		#Set the focus back on canvas
-		self.image_canvas.focus_set()
+		#self.image_canvas.focus_set()
 		
 		#Delete current text
 		if self.cursor_text is not None:
@@ -1501,7 +1517,8 @@ class coffeegrindsize_GUI:
 		self.physical_length_var.set(None)
 		self.physical_angle_var.set(None)
 		self.pixel_scale_var.set(None)
-	
+		self.reference_object.set("Custom")
+		
 	#Method to open an image from the disk
 	def open_image(self, event):
 		
@@ -2427,11 +2444,18 @@ class coffeegrindsize_GUI:
 		attainable_masses = self.attainable_mass_simulate(volumes)
 		effs = attainable_masses/volumes
 		
-		diameters_average = np.mean(diameters)
-		diameters_stddev = np.std(diameters)
+		#diameters_average = np.mean(diameters)
+		#diameters_stddev = np.std(diameters)
+		weights = np.maximum(np.ceil(attainable_masses/(coffee_cell_size/1e3)**3),1)
+		diameters_average = np.sum(diameters*weights)/np.sum(weights)
+		diameters_stddev = self.weighted_stddev(diameters,weights,frequency=True,unbiased=True)
 		
-		surfaces_average = np.mean(surfaces)
-		surfaces_stddev = np.std(surfaces)
+		#surfaces_average = np.mean(surfaces)
+		#surfaces_stddev = np.std(surfaces)
+		weights = np.maximum(np.ceil(attainable_masses/(coffee_cell_size/1e3)**3),1)
+		surfaces_average = np.sum(surfaces*weights)/np.sum(weights)
+		surfaces_stddev = self.weighted_stddev(surfaces,weights,frequency=True,unbiased=True)
+		quality = surfaces_average/surfaces_stddev
 		
 		#volumes_average = np.mean(volumes)
 		#volumes_stddev = np.std(volumes)
@@ -2455,6 +2479,7 @@ class coffeegrindsize_GUI:
 		eys_stddev_str = "{0:.{1}f}".format(eys_stddev, 1)
 		
 		effs_average_str = "{0:.{1}f}".format(effs_average, 1)
+		q_str = "{0:.{1}f}".format(quality, 2)
 		
 		self.diam_average_var.set(diameters_average_str)
 		self.diam_stddev_var.set(diameters_stddev_str)
@@ -2466,6 +2491,7 @@ class coffeegrindsize_GUI:
 		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
+		self.q_var.set(q_str)
 		
 	#Method to create histogram
 	def create_histogram(self, event):
@@ -2762,7 +2788,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to quit user interface
 	def quit_gui(self):
-		root.destroy()
+		root.quit()
 	
 	#Method to display help
 	def launch_help(self):
@@ -2783,3 +2809,5 @@ while True:
 		break
 	except UnicodeDecodeError:
 		pass
+	#except:
+	#	pdb.set_trace()

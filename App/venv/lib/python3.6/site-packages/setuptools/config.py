@@ -247,6 +247,26 @@ class ConfigHandler:
         return value in ('1', 'true', 'yes')
 
     @classmethod
+    def _exclude_files_parser(cls, key):
+        """Returns a parser function to make sure field inputs
+        are not files.
+
+        Parses a value after getting the key so error messages are
+        more informative.
+
+        :param key:
+        :rtype: callable
+        """
+        def parser(value):
+            exclude_directive = 'file:'
+            if value.startswith(exclude_directive):
+                raise ValueError(
+                    'Only strings are accepted for the {0} field, '
+                    'files are not accepted'.format(key))
+            return value
+        return parser
+
+    @classmethod
     def _parse_file(cls, value):
         """Represents value as a string, allowing including text
         from nearest files using `file:` directive.
@@ -255,7 +275,6 @@ class ConfigHandler:
         directory with setup.py.
 
         Examples:
-            file: LICENSE
             file: README.rst, CHANGELOG.md, src/file.txt
 
         :param str value:
@@ -394,7 +413,7 @@ class ConfigHandler:
 
             section_parser_method = getattr(
                 self,
-                # Dots in section names are tranlsated into dunderscores.
+                # Dots in section names are translated into dunderscores.
                 ('parse_section%s' % method_postfix).replace('.', '__'),
                 None)
 
@@ -407,8 +426,8 @@ class ConfigHandler:
 
     def _deprecated_config_handler(self, func, msg, warning_class):
         """ this function will wrap around parameters that are deprecated
-        
-        :param msg: deprecation message 
+
+        :param msg: deprecation message
         :param warning_class: class of warning exception to be raised
         :param func: function to be wrapped around
         """
@@ -416,7 +435,7 @@ class ConfigHandler:
         def config_handler(*args, **kwargs):
             warnings.warn(msg, warning_class)
             return func(*args, **kwargs)
-        
+
         return config_handler
 
 
@@ -449,18 +468,20 @@ class ConfigMetadataHandler(ConfigHandler):
         parse_list = self._parse_list
         parse_file = self._parse_file
         parse_dict = self._parse_dict
+        exclude_files_parser = self._exclude_files_parser
 
         return {
             'platforms': parse_list,
             'keywords': parse_list,
             'provides': parse_list,
-            'requires': self._deprecated_config_handler(parse_list,
-                "The requires parameter is deprecated, please use " +
+            'requires': self._deprecated_config_handler(
+                parse_list,
+                "The requires parameter is deprecated, please use "
                 "install_requires for runtime dependencies.",
                 DeprecationWarning),
             'obsoletes': parse_list,
             'classifiers': self._get_parser_compound(parse_file, parse_list),
-            'license': parse_file,
+            'license': exclude_files_parser('license'),
             'description': parse_file,
             'long_description': parse_file,
             'version': self._parse_version,

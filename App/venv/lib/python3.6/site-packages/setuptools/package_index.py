@@ -856,7 +856,7 @@ class PackageIndex(Environment):
             scheme, netloc, path, p, q, f = urllib.parse.urlparse(url)
             if not netloc and path.startswith('//') and '/' in path[2:]:
                 netloc, path = path[2:].split('/', 1)
-                auth, host = urllib.parse.splituser(netloc)
+                auth, host = _splituser(netloc)
                 if auth:
                     if ':' in auth:
                         user, pw = auth.split(':', 1)
@@ -1047,7 +1047,8 @@ class PyPIConfig(configparser.RawConfigParser):
 def open_with_auth(url, opener=urllib.request.urlopen):
     """Open a urllib2 request, handling HTTP authentication"""
 
-    scheme, netloc, path, params, query, frag = urllib.parse.urlparse(url)
+    parsed = urllib.parse.urlparse(url)
+    scheme, netloc, path, params, query, frag = parsed
 
     # Double scheme does not raise on Mac OS X as revealed by a
     # failing test. We would expect "nonnumeric port". Refs #20.
@@ -1055,7 +1056,7 @@ def open_with_auth(url, opener=urllib.request.urlopen):
         raise http_client.InvalidURL("nonnumeric port: ''")
 
     if scheme in ('http', 'https'):
-        auth, host = urllib.parse.splituser(netloc)
+        auth, address = _splituser(netloc)
     else:
         auth = None
 
@@ -1068,7 +1069,7 @@ def open_with_auth(url, opener=urllib.request.urlopen):
 
     if auth:
         auth = "Basic " + _encode_auth(auth)
-        parts = scheme, host, path, params, query, frag
+        parts = scheme, address, path, params, query, frag
         new_url = urllib.parse.urlunparse(parts)
         request = urllib.request.Request(new_url)
         request.add_header("Authorization", auth)
@@ -1082,11 +1083,18 @@ def open_with_auth(url, opener=urllib.request.urlopen):
         # Put authentication info back into request URL if same host,
         # so that links found on the page will work
         s2, h2, path2, param2, query2, frag2 = urllib.parse.urlparse(fp.url)
-        if s2 == scheme and h2 == host:
+        if s2 == scheme and h2 == address:
             parts = s2, netloc, path2, param2, query2, frag2
             fp.url = urllib.parse.urlunparse(parts)
 
     return fp
+
+
+# copy of urllib.parse._splituser from Python 3.8
+def _splituser(host):
+    """splituser('user[:passwd]@host[:port]') --> 'user[:passwd]', 'host[:port]'."""
+    user, delim, host = host.rpartition('@')
+    return (user if delim else None), host
 
 
 # adding a timeout to avoid freezing package_index

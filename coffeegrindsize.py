@@ -621,7 +621,6 @@ class coffeegrindsize_GUI:
 		#self.image_canvas.bind("<B2-Motion>", self.line_move)
 		
 		#Set up key bindings for zooming in and out with the i/o keys
-		#self.image_canvas.bind_all("<Command-i>", self.zoom_in)
 		self.image_canvas.bind_all("<Command-i>", self.zoom_in)
 		self.image_canvas.bind_all("<Command-o>", self.zoom_out
 			)
@@ -635,8 +634,8 @@ class coffeegrindsize_GUI:
 		self.master.bind_all("<Command-h>", self.create_histogram)
 		self.master.bind_all("<Command-s>", self.save_data)
 		self.master.bind_all("<Command-l>", self.load_data)
-		self.master.bind_all("<Command-c>", self.load_comparison_data)
-		self.master.bind_all("<Command-v>", self.save_histogram)
+		self.master.bind_all("<Control-c>", self.load_comparison_data)
+		self.master.bind_all("<Control-v>", self.save_histogram)
 		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("<Escape>", self.quit_region_select)
