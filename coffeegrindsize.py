@@ -63,6 +63,9 @@ def_min_roundness = 0
 def_min_x_axis = 0.01
 def_max_x_axis = 10
 
+#Default coffee cell size estimate in microns
+coffee_cell_size = 20.
+
 #Default name for the session (used for output filenames)
 def_session_name = "PSD_"+time.strftime("%Y%m%d_%Hh%Mm%Ss")
 
@@ -468,7 +471,7 @@ class coffeegrindsize_GUI:
 		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		stats_column += 3
-		stats_row =1
+		stats_row = 1
 		
 		separator_label = Label(self.frame_stats, text="", width=stats_colsep_width, bg=frame_stats_bg)
 		separator_label.grid(row=stats_row, column=stats_column)
@@ -483,6 +486,17 @@ class coffeegrindsize_GUI:
 		eff_entry.grid(row=stats_row, column=stats_column+1)
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		
+		stats_row += 1
+		
+		# self.q_var = StringVar()
+		# self.q_var.set("None")
+		# eff_label = Label(self.frame_stats, text="Quality:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		# eff_label.grid(row=stats_row, sticky=E, column=stats_column)
+		# eff_entry = Label(self.frame_stats, textvariable=self.q_var, width=stats_entry_width, bg=frame_stats_bg)
+		# eff_entry.grid(row=stats_row, column=stats_column+1)
+		# unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
+		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		# === Create a canvas to display images and figures ===
 		
@@ -2430,11 +2444,17 @@ class coffeegrindsize_GUI:
 		attainable_masses = self.attainable_mass_simulate(volumes)
 		effs = attainable_masses/volumes
 		
-		diameters_average = np.mean(diameters)
-		diameters_stddev = np.std(diameters)
+		#diameters_average = np.mean(diameters)
+		#diameters_stddev = np.std(diameters)
+		weights = np.maximum(np.ceil(attainable_masses/(coffee_cell_size/1e3)**3),1)
+		diameters_average = np.sum(diameters*weights)/np.sum(weights)
+		diameters_stddev = self.weighted_stddev(diameters,weights,frequency=True,unbiased=True)
 		
-		surfaces_average = np.mean(surfaces)
-		surfaces_stddev = np.std(surfaces)
+		#surfaces_average = np.mean(surfaces)
+		#surfaces_stddev = np.std(surfaces)
+		weights = np.maximum(np.ceil(attainable_masses/(coffee_cell_size/1e3)**3),1)
+		surfaces_average = np.sum(surfaces*weights)/np.sum(weights)
+		surfaces_stddev = self.weighted_stddev(surfaces,weights,frequency=True,unbiased=True)
 		
 		#volumes_average = np.mean(volumes)
 		#volumes_stddev = np.std(volumes)
