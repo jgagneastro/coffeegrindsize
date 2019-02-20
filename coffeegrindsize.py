@@ -279,7 +279,7 @@ class coffeegrindsize_GUI:
 		#self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "ex_mass_diam", "ex_mass_surf", "ex_mass_vol", "surf_diam", "surf_surf", "surf_vol", "ey_dist"]
 		self.default_histogram_choice = 7
 		self.hist_choices = ["Number vs Diameter", "Number vs Surface", "Number vs Volume", "Mass vs Diameter", "Mass vs Surface", "Mass vs Volume", "Available mass vs Diameter", "Available mass vs Surface", "Available mass vs Volume", "Surface vs Diameter", "Surface vs Surface", "Surface vs Volume"]
-		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "att_mass_diam", "att_mass_surf", "att_mass_vol", "surf_diam", "surf_surf", "surf_vol"]
+		self.hist_codes = ["num_diam", "num_surf", "num_vol", "mass_diam", "mass_surf", "mass_vol", "av_mass_diam", "av_mass_surf", "av_mass_vol", "surf_diam", "surf_surf", "surf_vol"]
 		self.histogram_type = self.dropdown_entry("Histogram Options:", self.hist_choices, self.change_histogram_type, default_choice_index=self.default_histogram_choice)
 		
 		self.legend_choices = ["Best", "Upper Right", "Upper Left", "Lower Right", "Lower Left", "Center Right", "Center Left", "Lower Center", "Upper Center", "Right", "Center"]
