@@ -28,10 +28,10 @@ stop = pdb.set_trace
 # === Default Parameters for analysis and plotting ===
 
 #Whether or not to display advanced options
-def_display_advanced_options = True
+def_display_advanced_options = False
 
 #Expert mode with all the options
-def_expert_mode = True
+def_expert_mode = False
 
 #Threshold to select reference dark pixel
 #def_reference_threshold = 0.1 #First version (too agressive)
@@ -334,12 +334,8 @@ class coffeegrindsize_GUI:
 		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis | ", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
 		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
-		#Also create the simple version
-		simple_xaxis_auto_checkbox = Checkbutton(self.simple_frame_options, text="Automated X axis | ", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
-		simple_xaxis_auto_checkbox.grid(row=self.simple_options_row, columnspan=1, sticky=E, column=0)
-		
 		#X axis range for the histogram figure
-		self.xmin_var, self.xmin_var_id, self.simple_xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
@@ -348,13 +344,11 @@ class coffeegrindsize_GUI:
 		xlog_checkbox = Checkbutton(self.frame_options, text="Log X axis | ", variable=self.xlog_var, command=self.xlog_event)
 		xlog_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
-		self.xmax_var, self.xmax_var_id, self.simple_xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
 		
 		#By default these options are disabled
 		self.xmin_var_id.config(state=DISABLED)
 		self.xmax_var_id.config(state=DISABLED)
-		self.simple_xmin_var_id.config(state=DISABLED)
-		self.simple_xmax_var_id.config(state=DISABLED)
 		
 		self.options_row += 1
 		
