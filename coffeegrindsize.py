@@ -28,7 +28,10 @@ stop = pdb.set_trace
 # === Default Parameters for analysis and plotting ===
 
 #Whether or not to display advanced options
-def_display_advanced_options = False
+def_display_advanced_options = True
+
+#Expert mode with all the options
+def_expert_mode = True
 
 #Threshold to select reference dark pixel
 #def_reference_threshold = 0.1 #First version (too agressive)
@@ -102,6 +105,9 @@ class coffeegrindsize_GUI:
 		#This variable contains the output directory
 		self.output_dir = def_output_dir
 		
+		#Expert mode has many more options
+		self.expert_mode = def_expert_mode
+		
 		#This variable will contain the object of the image currently displayed
 		self.image_id = None
 		
@@ -140,6 +146,9 @@ class coffeegrindsize_GUI:
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
 		
+		#Apply a maximal scale of three zoom-ins
+		self.max_scale = 8.0
+		
 		#This variable controls the zoom directionality (+1 in/-1 out)
 		self.zoom_dir = 0
 		
@@ -148,6 +157,7 @@ class coffeegrindsize_GUI:
 		
 		#The first row where options or buttons will be displayed
 		self.options_row = 1
+		self.simple_options_row = 1
 		
 		#The width of text entries for adjustable options
 		self.width_entries = 6
@@ -191,8 +201,18 @@ class coffeegrindsize_GUI:
 		status.pack(side=BOTTOM, fill=X)
 		
 		# === Initialize the main frame that will contain option buttons and settings and the image ===
-		self.frame_options = Frame(root)
-		self.frame_options.pack()
+		self.container_options = Frame(root, width=720)
+		self.container_options.pack(side="left", fill=Y)#, expand=True)
+		#self.container_options.grid_rowconfigure(0, weight=1)
+		#self.container_options.grid_columnconfigure(0, weight=1)
+		
+		options_width = 500
+		self.frame_options = Frame(self.container_options, width=options_width)
+		self.frame_options.grid(row=0, column=0, sticky="nsew", columnspan=1, rowspan=25)
+		
+		# === Create another version of that frame that excludes advanced options
+		self.simple_frame_options = Frame(self.container_options, width=options_width)
+		self.simple_frame_options.grid(row=0, column=0, sticky="nsew", columnspan=1, rowspan=25)
 		
 		# === Build the adjustable keyword options ===
 		
@@ -208,9 +228,11 @@ class coffeegrindsize_GUI:
 			def_pix_len = def_pixel_scale*float(reference_objects_dict["Custom"])
 		
 		#Length of the reference object
-		self.pixel_length_var, self.pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True)
-		self.physical_length_var, self.physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale")
+		#Comment on March 3, 2019: To add support for simplified output, use argument simple_data_entry=simple_data_entry
+		self.pixel_length_var, self.pixel_length_id, self.simple_pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True)
+		self.physical_length_var, self.physical_length_id, self.simple_physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale")
 		self.pixel_length_id.config(state=DISABLED)
+		self.simple_pixel_length_id.config(state=DISABLED)
 		
 		#Angle of selection
 		self.physical_angle_var = StringVar()
@@ -225,29 +247,29 @@ class coffeegrindsize_GUI:
 		#self.label_separator()
 		
 		#All options related to image thresholding
-		self.label_title("Threshold Step:")
+		self.label_title("Threshold Step:", advanced=True)
 		
 		#Value of fractional threshold in units of flux in the blue channel of the image
-		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%")
+		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%", advanced=True)
 		
 		#self.label_separator()
 		
 		#All options related to particle detection
-		self.label_title("Particle Detection Step:")
+		self.label_title("Particle Detection Step:", advanced=True)
 		
 		#Maximum cluster diameter that should be considered a valid coffee particle
-		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix")
+		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix", advanced=True)
 		
 		#Minumum cluster surface that should be considered a valid coffee particle
-		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix²")
+		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix²", advanced=True)
 		
 		#Minimum cluster roundness that should be considered a valid coffee particle
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
-		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "")
+		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "", advanced=True)
 		
 		#Threshold to select pixels dark enough to serve as a reference in the cost function in the cluster breakup step
 		if self.display_advanced_options is True:
-			self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "")
+			self.reference_threshold_var = self.label_entry(def_reference_threshold, "Ref. Threshold:", "", advanced=True)
 		else:
 			if self.reference_threshold_var is None:
 				self.reference_threshold_var = StringVar()
@@ -255,7 +277,7 @@ class coffeegrindsize_GUI:
 		
 		#Maximum cost in the cluster breakup step
 		if self.display_advanced_options is True:
-			self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "")
+			self.maxcost_var = self.label_entry(def_maxcost, "Max. Cost:", "", advanced=True)
 		else:
 			if self.maxcost_var is None:
 				self.maxcost_var = StringVar()
@@ -269,7 +291,7 @@ class coffeegrindsize_GUI:
 		
 		self.options_row += 1
 		
-		#self.label_separator()
+		self.label_separator(simpleonly=True)
 		
 		#All options related to particle detection
 		self.label_title("Create Histogram Step:")
@@ -286,13 +308,14 @@ class coffeegrindsize_GUI:
 		self.legend_type = self.dropdown_entry("Label Position:", self.legend_choices, self.change_histogram_type)
 		
 		#Label for the data
-		self.data_label_var, self.data_label_id = self.label_entry("Current Data", "Data Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
+		self.data_label_var = self.label_entry("Current Data", "Data Label:", "", columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
 		
 		#Label for the comparison data
-		self.comparison_data_label_var, self.comparison_data_label_id = self.label_entry("Comparison Data", "Comparison Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
+		self.comparison_data_label_var, self.comparison_data_label_id, self.simple_comparison_data_label_id = self.label_entry("Comparison Data", "Comparison Label:", "", entry_id=True, columnspan=2, width=self.width_entries*3, event_on_enter="create_histogram")
 		
 		#Deactivate by default
 		self.comparison_data_label_id.config(state=DISABLED)
+		self.simple_comparison_data_label_id.config(state=DISABLED)
 		
 		#Whether the X axis of the histogram should be set manually
 		#This is a checkbox
@@ -301,8 +324,12 @@ class coffeegrindsize_GUI:
 		xaxis_auto_checkbox = Checkbutton(self.frame_options, text="Automated X axis | ", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
 		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
+		#Also create the simple version
+		simple_xaxis_auto_checkbox = Checkbutton(self.simple_frame_options, text="Automated X axis | ", variable=self.xaxis_auto_var, command=self.xaxis_auto_event)
+		simple_xaxis_auto_checkbox.grid(row=self.simple_options_row, columnspan=1, sticky=E, column=0)
+		
 		#X axis range for the histogram figure
-		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmin_var, self.xmin_var_id, self.simple_xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
@@ -311,11 +338,13 @@ class coffeegrindsize_GUI:
 		xlog_checkbox = Checkbutton(self.frame_options, text="Log X axis | ", variable=self.xlog_var, command=self.xlog_event)
 		xlog_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
-		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.xmax_var, self.xmax_var_id, self.simple_xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
 		
 		#By default these options are disabled
 		self.xmin_var_id.config(state=DISABLED)
 		self.xmax_var_id.config(state=DISABLED)
+		self.simple_xmin_var_id.config(state=DISABLED)
+		self.simple_xmax_var_id.config(state=DISABLED)
 		
 		self.options_row += 1
 		
@@ -329,7 +358,7 @@ class coffeegrindsize_GUI:
 		#self.options_row += 1
 		
 		#X axis range for the histogram figure
-		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Num. bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram")
+		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Num. bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
 		
 		#By default this option is disabled
 		self.nbins_var_id.config(state=DISABLED)
@@ -337,22 +366,22 @@ class coffeegrindsize_GUI:
 		#self.label_separator()
 		
 		#All options related to saving output data
-		self.label_title("Output Options:")
+		self.label_title("Output Options:", advanced=True)
 		
 		#Button to select an output directory
 		output_dir_button = Button(self.frame_options, text="Select Output Directory:", command=self.select_output_dir)
 		output_dir_button.grid(row=self.options_row, sticky=E)
 		
 		#Display current output dir
-		self.output_dir_var, self.output_dir_label_id = self.label_entry(self.output_dir, "", "", entry_id=True, columnspan=2, width=self.width_entries*3)
+		self.output_dir_var, self.output_dir_label_id = self.label_entry(self.output_dir, "", "", entry_id=True, columnspan=2, width=self.width_entries*3, advanced=True)
 		self.output_dir_label_id.config(state=DISABLED)
 		
 		self.options_row += 1
 		
 		#The base of the output file names
-		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3)
+		self.session_name_var = self.label_entry(def_session_name, "Base of File Names:", "", columnspan=2, width=self.width_entries*3, advanced=True)
 		
-		#self.label_separator()
+		self.label_separator(simpleonly=True)
 		
 		#All options related to image display
 		self.label_title("Display Options:")
@@ -363,6 +392,9 @@ class coffeegrindsize_GUI:
 		
 		#Remember the previous display type in case of error
 		self.previous_display_type = choices[0]
+		
+		self.label_separator(simpleonly=True)
+		self.label_separator(simpleonly=True)
 		
 		#Button to zoom in
 		self.zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
@@ -376,15 +408,34 @@ class coffeegrindsize_GUI:
 		self.reset_zoom_button.grid(row=self.options_row, column=2, columnspan=1, sticky=W)
 		self.options_row += 1
 		
+		#Simplified versions of zoom buttons
+		self.simple_zoom_in_button = Button(self.simple_frame_options, text="Zoom In", command=self.zoom_in_button)
+		self.simple_zoom_in_button.grid(row=self.simple_options_row, column=0, columnspan=1, sticky=E)
+		
+		self.simple_zoom_out_button = Button(self.simple_frame_options, text="Zoom Out", command=self.zoom_out_button)
+		self.simple_zoom_out_button.grid(row=self.simple_options_row, column=1, columnspan=1, sticky=W)
+		
+		self.simple_reset_zoom_button = Button(self.simple_frame_options, text="Reset View", command=self.reset_zoom)
+		self.simple_reset_zoom_button.grid(row=self.simple_options_row, column=2, columnspan=1, sticky=W)
+		self.simple_options_row += 1
+		
 		#Button for resetting all options to default
 		reset_params_button = Button(self.frame_options, text="Reset All Parameters", command=self.reset_status)
 		reset_params_button.grid(row=self.options_row, column=1, columnspan=2, sticky=E)
 		
+		#Simplified version of button
+		simple_reset_params_button = Button(self.simple_frame_options, text="Reset All Parameters", command=self.reset_status)
+		simple_reset_params_button.grid(row=self.simple_options_row, column=1, columnspan=2, sticky=E)
+		
+		#If expert mode is already set then display it
+		if self.expert_mode is True:
+			self.frame_options.tkraise()
+		
 		# === Create a frame to display some stats ===
 		
 		frame_stats_bg = "gray60"
-		self.frame_stats = Frame(self.frame_options, bg=frame_stats_bg, padx=2, pady=10)
-		self.frame_stats.grid(row=0, column=3, sticky="new", rowspan=10)
+		self.frame_stats = Frame(self.container_options, bg=frame_stats_bg, padx=2, pady=10)
+		self.frame_stats.grid(row=0, column=1, sticky="new", rowspan=1)
 		
 		title_label = Label(self.frame_stats, text="Properties of the Particle Distribution:", font='Helvetica 16 bold', bg=frame_stats_bg)
 		title_label.grid(row=0, sticky=W, padx=self.title_padx, columnspan=12)
@@ -487,23 +538,26 @@ class coffeegrindsize_GUI:
 		unit_label = Label(self.frame_stats, text="(%)", bg=frame_stats_bg)
 		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
-		# stats_row += 1
+		stats_row += 1
 		
-		# self.q_var = StringVar()
-		# self.q_var.set("None")
-		# eff_label = Label(self.frame_stats, text="Quality:", bg=frame_stats_bg, font='Helvetica 14 bold')
-		# eff_label.grid(row=stats_row, sticky=E, column=stats_column)
-		# eff_entry = Label(self.frame_stats, textvariable=self.q_var, width=stats_entry_width, bg=frame_stats_bg)
-		# eff_entry.grid(row=stats_row, column=stats_column+1)
-		# unit_label = Label(self.frame_stats, text="", bg=frame_stats_bg)
-		# unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
+		self.q_var = StringVar()
+		self.q_var.set("None")
+		eff_label = Label(self.frame_stats, text="Quality:", bg=frame_stats_bg, font='Helvetica 14 bold')
+		eff_label.grid(row=stats_row, sticky=E, column=stats_column)
+		eff_entry = Label(self.frame_stats, textvariable=self.q_var, width=stats_entry_width, bg=frame_stats_bg)
+		eff_entry.grid(row=stats_row, column=stats_column+1)
+		unit_label = Label(self.frame_stats, text="", bg=frame_stats_bg)
+		unit_label.grid(row=stats_row, column=stats_column+2, sticky=W)
 		
 		# === Create a canvas to display images and figures ===
 		
 		#Initialize the image canvas
 		image_canvas_bg = "gray40"
-		self.image_canvas = Canvas(self.frame_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
-		self.image_canvas.grid(row=4, column=3, rowspan=145, sticky=N)
+		self.image_canvas = Canvas(self.container_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
+		self.image_canvas.grid(row=1, column=1, sticky=N, rowspan=24)
+		
+		#stop()
+		#self.frame_options.tkraise()
 		
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
@@ -599,6 +653,10 @@ class coffeegrindsize_GUI:
 		#subMenu.add_command(label="Toggle Advanced Options...", command=self.toggle_advanced_options)
 		subMenu.add_separator()
 		
+		#Expert mode with all options
+		subMenu.add_command(label="Turn Expert Mode On/Off...", command=self.toggle_expert_mode)
+		subMenu.add_separator()
+		
 		#Add an option for debugging
 		subMenu.add_command(label="Python Debugger...", command=self.pdb_call)
 		subMenu.add_separator()
@@ -674,11 +732,15 @@ class coffeegrindsize_GUI:
 		if self.xaxis_auto_var.get() == 0:
 			self.xmin_var_id.config(state=NORMAL)
 			self.xmax_var_id.config(state=NORMAL)
+			self.simple_xmin_var_id.config(state=NORMAL)
+			self.simple_xmax_var_id.config(state=NORMAL)
 		
 		#If automated then disable the parameters
 		if self.xaxis_auto_var.get() == 1:
 			self.xmin_var_id.config(state=DISABLED)
 			self.xmax_var_id.config(state=DISABLED)
+			self.simple_xmin_var_id.config(state=DISABLED)
+			self.simple_xmax_var_id.config(state=DISABLED)
 	
 	#Method to select the reference object in the image with the mouse
 	def select_reference_object_mouse(self, event):
@@ -801,8 +863,10 @@ class coffeegrindsize_GUI:
 		#Enable or disable the manual data entry depending on dictionary value
 		if self.reference_object.get() == "Custom":
 			self.physical_length_id.config(state=NORMAL)
+			self.simple_physical_length_id.config(state=NORMAL)
 		else:
 			self.physical_length_id.config(state=DISABLED)
+			self.simple_physical_length_id.config(state=DISABLED)
 		
 		#Update the resulting pixel scale
 		self.update_pixel_scale()
@@ -952,7 +1016,7 @@ class coffeegrindsize_GUI:
 		#Update the user interface
 		self.master.update()
 		
-	def dropdown_entry(self, label, choices, method, default_choice_index=0):
+	def dropdown_entry(self, label, choices, method, default_choice_index=0, advanced=False):
 		
 		#Create a variable that will be bound to the dropdown menu
 		data_var = StringVar()
@@ -964,9 +1028,19 @@ class coffeegrindsize_GUI:
 		dropdown_label = Label(self.frame_options, text=label)
 		dropdown_label.grid(row=self.options_row, sticky=E)
 		
+		#Also create simple version if needed
+		if advanced is False:
+			simple_dropdown_label = Label(self.simple_frame_options, text=label)
+			simple_dropdown_label.grid(row=self.simple_options_row, sticky=E)
+		
 		#Create the dropdown menu itself
 		dropdown_menu = OptionMenu(self.frame_options, data_var, *choices)
 		dropdown_menu.grid(row=self.options_row, column=1, columnspan=2, sticky=EW)
+		
+		#Also create simple version if needed
+		if advanced is False:
+			simple_dropdown_menu = OptionMenu(self.simple_frame_options, data_var, *choices)
+			simple_dropdown_menu.grid(row=self.simple_options_row, column=1, columnspan=2, sticky=EW)
 		
 		#Link the tropdown menu to a method
 		data_var.trace('w', method)
@@ -974,11 +1048,15 @@ class coffeegrindsize_GUI:
 		#Update the display row
 		self.options_row += 1
 		
+		#Also update simple version if needed
+		if advanced is False:
+			self.simple_options_row += 1
+		
 		#Return internal variable to caller
 		return data_var
 	
 	#Method to display a label in the options frame
-	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None, addcol=0, event_on_enter=None):
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None, addcol=0, event_on_enter=None, advanced=False):
 		
 		#Default width is located in the internal class variables
 		if width is None:
@@ -994,6 +1072,10 @@ class coffeegrindsize_GUI:
 		if text != "":
 			data_label = Label(self.frame_options, text=text)
 			data_label.grid(row=self.options_row, sticky=E, column=addcol)
+			#Also display simplified version if required
+			if advanced is False:
+				simple_data_label = Label(self.simple_frame_options, text=text)
+				simple_data_label.grid(row=self.simple_options_row, sticky=E, column=addcol)
 		
 		#Link data entry to an event if this is required
 		if event_on_entry is not None:
@@ -1005,37 +1087,71 @@ class coffeegrindsize_GUI:
 		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
 		data_entry.grid(row=self.options_row, column=1+addcol, columnspan=columnspan)
 		
+		#Also display simplified version if required
+		if advanced is False:
+			simple_data_entry = Entry(self.simple_frame_options, textvariable=data_var, width=width)
+			simple_data_entry.grid(row=self.simple_options_row, column=1+addcol, columnspan=columnspan)
+		
 		#Bind the return key with a method
 		if event_on_enter is not None:
 			function_trigger = getattr(self, event_on_enter)
 			data_entry.bind('<Return>', function_trigger)
+			if advanced is False:
+				simple_data_entry.bind('<Return>', function_trigger)
 		
 		#Display the physical units of this option
 		if units_text != "":
 			data_label_units = Label(self.frame_options, text=units_text)
 			data_label_units.grid(row=self.options_row, column=2+addcol, sticky=W)
+			#Also display simplified version if required
+			if advanced is False:
+				simple_data_label_units = Label(self.simple_frame_options, text=units_text)
+				simple_data_label_units.grid(row=self.simple_options_row, column=2+addcol, sticky=W)
 		
 		#Update the row where next labels and entries will be displayed
 		self.options_row += 1
 		
+		#Also updated row of simplified window if required
+		if advanced is False:
+			self.simple_options_row += 1
+		
 		#Return data entry ID to caller if required
 		if entry_id is True:
-			return data_var, data_entry
+			if advanced is False:
+				return data_var, data_entry, simple_data_entry
+			else:	
+				return data_var, data_entry
 		else:
 			#Otherwise return just value of the bound variable to the caller
 			return data_var
 	
 	#Method to display a title for option groups
-	def label_title(self, text):
+	def label_title(self, text, advanced=False):
+		
+		#Add label to the simplified frame if this is not an advanced option
+		if advanced is False:
+			title_label = Label(self.simple_frame_options, text=text, font='Helvetica 16 bold')
+			title_label.grid(row=self.simple_options_row, sticky=W, padx=self.title_padx, columnspan=2)
+			self.simple_options_row += 1
+		
+		#Add label to the advanced frame
 		title_label = Label(self.frame_options, text=text, font='Helvetica 16 bold')
 		title_label.grid(row=self.options_row, sticky=W, padx=self.title_padx, columnspan=2)
 		self.options_row += 1
+		
+		
+		
 	
 	#Method to display a vertical blank separator in the options frame
-	def label_separator(self):
-		separator_label = Label(self.frame_options, text="")
-		separator_label.grid(row=self.options_row)
-		self.options_row += 1
+	def label_separator(self, advanced=False, simpleonly=False):
+		if simpleonly is False:
+			separator_label = Label(self.frame_options, text="")
+			separator_label.grid(row=self.options_row)
+			self.options_row += 1
+		if advanced is False:
+			simple_separator_label = Label(self.simple_frame_options, text="")
+			simple_separator_label.grid(row=self.simple_options_row)
+			self.simple_options_row += 1
 	
 	#Method to redraw the image after a zoom
 	def redraw(self, x=0, y=0):
@@ -1352,6 +1468,11 @@ class coffeegrindsize_GUI:
 	#Method to apply a zoom in any direction
 	def zoom(self, event, directionality):
 		
+		#Check for maximal scale
+		if directionality > 0:
+			if self.scale/self.original_scale >= self.max_scale:
+				return
+		
 		#Get current coordinates of image
 		image_x, image_y = self.image_canvas.coords(self.image_id)
 		
@@ -1386,6 +1507,19 @@ class coffeegrindsize_GUI:
 		
 		#Redraw image at the desired position
 		self.redraw(x=new_image_x, y=new_image_y)
+	
+	#Trigger expert mode
+	def toggle_expert_mode(self):
+		
+		if self.expert_mode is False:
+			self.frame_options.tkraise()
+			self.expert_mode = True
+			return
+		
+		if self.expert_mode is True:
+			self.simple_frame_options.tkraise()
+			self.expert_mode = False
+			return
 	
 	#Method to trigger the Python debugger
 	def pdb_call(self):
@@ -2491,7 +2625,7 @@ class coffeegrindsize_GUI:
 		#self.ey_stddev_var.set(eys_stddev_str)
 		
 		self.eff_var.set(effs_average_str)
-		#self.q_var.set(q_str)
+		self.q_var.set(q_str)
 		
 	#Method to create histogram
 	def create_histogram(self, event):
@@ -2656,6 +2790,7 @@ class coffeegrindsize_GUI:
 		
 		#Activate the comparison data label
 		self.comparison_data_label_id.config(state=NORMAL)
+		self.simple_comparison_data_label_id.config(state=NORMAL)
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
@@ -2678,6 +2813,7 @@ class coffeegrindsize_GUI:
 		
 		#Deactivate the comparison data label
 		self.comparison_data_label_id.config(state=DISABLED)
+		self.simple_comparison_data_label_id.config(state=DISABLED)
 		
 		#If there is already a histogram in play, refresh it
 		if self.img_histogram is not None:
@@ -2690,7 +2826,7 @@ class coffeegrindsize_GUI:
 	def save_data(self, event):
 		
 		#Verify if PSD analysis was done
-		if self.cluster_data is None:
+		if self.nclusters is None:
 			
 			#Update the user interface status
 			self.status_var.set("Particles not Detected Yet... Use Launch Particle Detection Button...")
@@ -2718,9 +2854,14 @@ class coffeegrindsize_GUI:
 		dataframe = pd.DataFrame({"SURFACE":self.clusters_surface,"ROUNDNESS":self.clusters_roundness,"SHORT_AXIS":self.clusters_short_axis,"LONG_AXIS":self.clusters_long_axis,"VOLUME":self.clusters_volume,"PIXEL_SCALE":pixel_scale})
 		dataframe.index.name = "ID"
 		
-		#Save file to CSV
+		#If expert mode is off ask for an output directory
 		filename = self.session_name_var.get()+"_data.csv"
-		full_filename = self.output_dir+os.sep+filename
+		if self.expert_mode is True:
+			full_filename = self.output_dir+os.sep+filename
+		else:
+			full_filename = filedialog.asksaveasfilename(initialdir=self.output_dir, initialfile=filename, title="Select an output file name")
+		
+		#Save file to CSV
 		dataframe.to_csv(full_filename)
 		
 		#Update the user interface status
@@ -2769,10 +2910,14 @@ class coffeegrindsize_GUI:
 			ihist = np.where(np.array(self.hist_choices) == self.histogram_type.get())
 			image_code = self.hist_codes[ihist[0][0]]
 		
-		#Save file to PNG
+		#If expert mode is off ask for an output directory
 		filename = self.session_name_var.get()+"_hist_"+image_code+".png"
-		full_filename = self.output_dir+os.sep+filename
+		if self.expert_mode is True:
+			full_filename = self.output_dir+os.sep+filename
+		else:
+			full_filename = filedialog.asksaveasfilename(initialdir=self.output_dir, initialfile=filename, title="Select an output file name")
 		
+		#Save file to PNG
 		self.img.save(full_filename)
 		
 		#Update the user interface status
