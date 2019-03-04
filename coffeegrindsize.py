@@ -2871,8 +2871,15 @@ class coffeegrindsize_GUI:
 		else:
 			full_filename = filedialog.asksaveasfilename(initialdir=self.output_dir, initialfile=filename, title="Select an output file name")
 		
-		#Save file to CSV
+		#Create a Pandas dataframe for stats
+		stats_dataframe = pd.DataFrame({"AVG_DIAM":[float(self.diam_average_var.get())],"STD_DIAM":[float(self.diam_stddev_var.get())], "AVG_SURF":[float(self.surf_average_var.get())],"STD_SURF":[float(self.surf_stddev_var.get())], "EFF":[float(self.eff_var.get())],"QUAL":[float(self.q_var.get())]})
+		
+		#Save files to CSV
 		dataframe.to_csv(full_filename)
+		
+		#Save stats too
+		stats_filename = os.path.dirname(full_filename)+os.sep+os.path.splitext(os.path.basename(full_filename))[0]+"_stats.csv"
+		stats_dataframe.to_csv(stats_filename)
 		
 		#Update the user interface status
 		self.status_var.set("Data Saved to "+filename+"...")
