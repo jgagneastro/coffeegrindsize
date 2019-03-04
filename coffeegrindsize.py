@@ -3150,6 +3150,7 @@ class coffeegrindsize_GUI:
 
 #Invoke tkinter package
 root = Tk()
+root.protocol('WM_DELETE_WINDOW', root.quit)
 
 #Call the user interface
 coffeegrindsize_GUI(root)
