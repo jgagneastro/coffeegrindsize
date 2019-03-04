@@ -145,6 +145,7 @@ class coffeegrindsize_GUI:
 		
 		#This is the display scale for zooming in/out
 		self.scale = 1.0
+		self.original_scale = 1.0
 		
 		#Apply a maximal scale of three zoom-ins
 		self.max_scale = 8.0
@@ -689,7 +690,7 @@ class coffeegrindsize_GUI:
 		self.master.bind_all("<Command-a>", self.select_region)
 		self.master.bind_all("<Command-t>", self.threshold_image)
 		self.master.bind_all("<Command-p>", self.launch_psd)
-		#self.master.bind_all("<Command-h>", self.create_histogram)
+		self.master.bind_all("<Command-h>", self.create_histogram)
 		self.master.bind_all("<Command-s>", self.save_data)
 		self.master.bind_all("<Command-l>", self.load_data)
 		self.master.bind_all("<Control-c>", self.load_comparison_data)
@@ -769,8 +770,9 @@ class coffeegrindsize_GUI:
 	#Method to select analysis region
 	def select_region(self, event):
 		
-		#Do nothing if already in select region mode
+		#Quit selection if already in select region mode
 		if self.mouse_click_mode == "SELECT_REGION":
+			self.quit_region_select(None)
 			return
 		
 		#Verify that an image is loaded
@@ -823,7 +825,12 @@ class coffeegrindsize_GUI:
 				self.selreg_current_line = None
 			
 			#If there are too few polygon corners just quit
-			if self.polygon_alpha.size < 3:
+			if self.polygon_alpha is None:
+				polysize = 0
+			else:
+				polysize = self.polygon_alpha.size
+			
+			if polysize < 3:
 				
 				#Delete all currently drawn lines
 				self.image_canvas.delete(self.image_canvas.find_withtag("line"))
@@ -1384,7 +1391,8 @@ class coffeegrindsize_GUI:
 			#Set the current point for the red line
 			self.line_move(event)
 			
-			self.cursor_text = self.image_canvas.create_text(self.mouse_x+10, self.mouse_y+10, anchor=W, font="Helvetica 14", text=self.physical_angle_var.get()+"°", fill="red")
+			#Hide the line angle for now because its buggy
+			#self.cursor_text = self.image_canvas.create_text(self.mouse_x+10, self.mouse_y+10, anchor=W, font="Helvetica 14", text=self.physical_angle_var.get()+"°", fill="red")
 		
 		#In analysis selection region mode, show the next line
 		if self.mouse_click_mode == "SELECT_REGION":
@@ -1652,6 +1660,8 @@ class coffeegrindsize_GUI:
 		self.physical_angle_var.set(None)
 		self.pixel_scale_var.set(None)
 		self.reference_object.set("Custom")
+		#Close all plots
+		plt.close()
 		
 	#Method to open an image from the disk
 	def open_image(self, event):
