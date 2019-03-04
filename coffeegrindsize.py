@@ -178,6 +178,15 @@ class coffeegrindsize_GUI:
 		self.last_image_x = self.canvas_width/2
 		self.last_image_y = self.canvas_height/2
 		
+		#This variable contains the controller for "erase clusters" mode
+		self.erase_clusters_mode = False
+		
+		#This variable contains the size of the erase tool at zero zoom
+		self.erase_circle_radius = 20
+		
+		#This will contain the circle drawn next to the cursor
+		self.erasemode_current_circle = None
+		
 		#Advanced options
 		self.display_advanced_options = def_display_advanced_options
 		self.reference_threshold_var = None
@@ -557,9 +566,6 @@ class coffeegrindsize_GUI:
 		self.image_canvas = Canvas(self.container_options, width=self.canvas_width, height=self.canvas_height, bg=image_canvas_bg)
 		self.image_canvas.grid(row=1, column=1, sticky=N, rowspan=24)
 		
-		#stop()
-		#self.frame_options.tkraise()
-		
 		#Prevent the image canvas to shrink when labels are placed in it
 		self.image_canvas.pack_propagate(0)
 		
@@ -591,6 +597,10 @@ class coffeegrindsize_GUI:
 		#Button to launch the particle detection analysis
 		psd_button = Button(toolbar, text="Launch Particle Detection", command=lambda: self.launch_psd(None),highlightbackground=toolbar_bg)
 		psd_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
+		
+		#Button to erase some clusters
+		erase_button = Button(toolbar, text="Erase Clusters", command=lambda: self.erase_clusters(None), highlightbackground=toolbar_bg)
+		erase_button.pack(side=LEFT, padx=self.toolbar_padx, pady=self.toolbar_pady)
 		
 		#Button to display histogram figures
 		histogram_button = Button(toolbar, text="Create Histogram", command=lambda: self.create_histogram(None), highlightbackground=toolbar_bg)
@@ -809,9 +819,24 @@ class coffeegrindsize_GUI:
 	#Method to finish analysis region selection
 	def quit_region_select(self, event):
 		
-		#Only active if image canvas has focus
-		if self.master.focus_get() != self.image_canvas:
+		#If the 'Erase Clusters' mode was selected then this is what needs to be quit
+		if self.erase_clusters_mode is True:
+			
+			#Update the user interface status
+			self.status_var.set("The 'Erase Clusters' mode was deactivated.")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Update "Erase Clusters" internal status and return
+			self.erase_clusters_mode = False
+			
 			return
+		
+		#2019 March 3 this is not needed anymore because we now use escape or return
+		#Only active if image canvas has focus
+		#if self.master.focus_get() != self.image_canvas:
+		#	return
 		
 		#Only active in SELECT_REGION mode
 		if self.mouse_click_mode == "SELECT_REGION":
@@ -975,6 +1000,10 @@ class coffeegrindsize_GUI:
 				
 				#Return to caller
 				return
+		
+		#Quit "Erase Clusters" mode if moving to something else than cluster outlines
+		if self.display_type.get() != outlines_image_display_name:
+			self.erase_clusters_mode = False
 		
 		#Reset zoom options etc if moving in to histogram style
 		if self.display_type.get() == histogram_image_display_name:
@@ -1283,6 +1312,65 @@ class coffeegrindsize_GUI:
 		if self.display_type.get() == histogram_image_display_name:
 			return
 		
+		#In "Erase Clusters" mode, erase clusters
+		if self.erase_clusters_mode is True:
+			#2019 March 3: Maybe this should be set in the "self.mouse_click_mode" variable
+			
+			# === Determine mouse position in original pixel units ===
+			#Get current coordinates of image
+			image_x, image_y = self.image_canvas.coords(self.image_id)
+			
+			#Include effect of drag
+			image_x -= self.image_canvas.canvasx(0)
+			image_y -= self.image_canvas.canvasy(0)
+		
+			#Get original image size
+			orig_nx, orig_ny = self.img.size
+		
+			#Determine cursor position on original image coordinates (x,y -> alpha, beta)
+			mouse_alpha = orig_nx/2 + (self.mouse_x - image_x)/self.scale
+			mouse_beta = orig_ny/2 + (self.mouse_y - image_y)/self.scale
+			
+			#Set the circle radius
+			rad = float(self.erase_circle_radius)/float(self.scale)
+			
+			#Calculate distance between cursor and clusters
+			dist = np.sqrt((self.clusters_xmean - mouse_beta)**2 + (self.clusters_ymean - mouse_alpha)**2)
+			
+			#Determine which clusters are included
+			delclus = (np.where(dist <= rad))[0]
+			
+			#Issue an error if all clusters are about to get deleted
+			if (len(delclus) != 0) & (len(delclus) >= self.nclusters):
+				
+				#Refresh the user interface status
+				self.status_var.set("All clusters cannot be erased.")
+				
+				#Refresh the state of the user interface window
+				self.master.update()
+				return
+			
+			#Remove the clusters
+			if (len(delclus) != 0) & (len(delclus) < self.nclusters):
+				
+				self.cluster_data = np.delete(self.cluster_data, delclus)
+				
+				#Regenerate cluster data
+				self.refresh_cluster_data()
+				
+				#Refresh the user interface status
+				self.status_var.set(str(len(delclus))+" clusters were erased.")
+				
+				#Refresh the state of the user interface window
+				self.master.update()
+				
+				#Refresh eraser circle
+				if self.erase_clusters_mode is True:
+					tmp_event = event
+					tmp_event.x = self.mouse_x
+					tmp_event.y = self.mouse_y
+					self.eraser_circle_refresh(tmp_event)
+		
 		#In normal mode, set start of motion
 		if self.mouse_click_mode is None:
 			self.image_canvas.scan_mark(event.x, event.y)
@@ -1368,8 +1456,35 @@ class coffeegrindsize_GUI:
 		#Update pixel scale
 		self.update_pixel_scale()
 	
+	#Method to refresh position of eraser circle
+	def eraser_circle_refresh(self, event):
+		
+		#Determine current X, Y positions of the mouse
+		cen_x = event.x
+		cen_y = event.y
+		
+		#Include effect of drag
+		cen_x += self.image_canvas.canvasx(0)
+		cen_y += self.image_canvas.canvasy(0)
+		
+		#Set the circle radius
+		rad = float(self.erase_circle_radius)
+		
+		#Define oval parameters
+		x0 = cen_x - rad
+		y0 = cen_y - rad
+		x1 = cen_x + rad
+		y1 = cen_y + rad
+		
+		#Destroy the circle if it exists
+		if self.erasemode_current_circle is not None:
+			self.image_canvas.delete(self.erasemode_current_circle)
+		
+		#Draw the circle again
+		self.erasemode_current_circle = self.image_canvas.create_oval(x0, y0, x1, y1, outline="orange", width=2)
+			
 	#Method to track the mouse position
-	def motion(self, event):
+	def motion(self, event, only_refresh_display=False):
 		
 		#Set the focus back on canvas
 		#self.image_canvas.focus_set()
@@ -1385,13 +1500,19 @@ class coffeegrindsize_GUI:
 		#Update the current mouse position
 		self.mouse_x, self.mouse_y = event.x, event.y
 		
+		#In "Erase Clusters" mode, draw a circle around the cursor
+		if self.erase_clusters_mode is True:
+			#2019 March 3: Maybe this should be set in the "self.mouse_click_mode" variable
+			
+			self.eraser_circle_refresh(event)
+		
 		#In Select Reference Object mode, set start of line
 		if self.mouse_click_mode == "SELECT_REFERENCE_OBJECT":
 			
 			#Set the current point for the red line
 			self.line_move(event)
 			
-			#Hide the line angle for now because its buggy
+			#2019 March 3: For now hide the line angle because its buggy
 			#self.cursor_text = self.image_canvas.create_text(self.mouse_x+10, self.mouse_y+10, anchor=W, font="Helvetica 14", text=self.physical_angle_var.get()+"°", fill="red")
 		
 		#In analysis selection region mode, show the next line
@@ -1515,7 +1636,13 @@ class coffeegrindsize_GUI:
 		
 		#Redraw image at the desired position
 		self.redraw(x=new_image_x, y=new_image_y)
-	
+		
+		#Refresh eraser circle
+		if self.erase_clusters_mode is True:
+			event.x = self.mouse_x
+			event.y = self.mouse_y
+			self.eraser_circle_refresh(event)
+			
 	#Trigger expert mode
 	def toggle_expert_mode(self):
 		
@@ -1573,6 +1700,7 @@ class coffeegrindsize_GUI:
 		self.output_dir_var.set(self.output_dir)
 		self.session_name_var.set(str(def_session_name))
 		self.display_type.set(original_image_display_name)
+		self.erase_clusters_mode = False
 		
 		#Reset zoom to center the image properly
 		self.reset_zoom()
@@ -2199,6 +2327,22 @@ class coffeegrindsize_GUI:
 			
 			#Append cluser data with this dictionary
 			self.cluster_data.append(clusteri_data)
+			
+		#Set the status to completed
+		self.status_var.set("Particle Detection Analysis Done ! Creating Cluster Map Image...")
+		self.master.update()
+		
+		#Refresh cluster data
+		self.refresh_cluster_data()
+		
+		#Refresh the user interface status
+		self.status_var.set("Particle Detection Analysis Done ! Cluster Map Image is Now Displayed...")
+		
+		#Refresh the state of the user interface window
+		self.master.update()
+		
+	#Method to refresh cluster data and map
+	def refresh_cluster_data(self):
 		
 		#Read useful cluster data
 		self.nclusters = len(self.cluster_data)
@@ -2207,16 +2351,16 @@ class coffeegrindsize_GUI:
 		self.clusters_roundness = np.full(self.nclusters, np.nan)
 		self.clusters_short_axis = np.full(self.nclusters, np.nan)
 		self.clusters_volume = np.full(self.nclusters, np.nan)
+		self.clusters_xmean = np.full(self.nclusters, np.nan)
+		self.clusters_ymean = np.full(self.nclusters, np.nan)
 		for i in range(self.nclusters):
 			self.clusters_surface[i] = self.cluster_data[i]["SURFACE"]
 			self.clusters_long_axis[i] = self.cluster_data[i]["LONG_AXIS"]
 			self.clusters_roundness[i] = self.cluster_data[i]["ROUNDNESS"]
 			self.clusters_short_axis[i] = self.cluster_data[i]["SHORT_AXIS"]
 			self.clusters_volume[i] = self.cluster_data[i]["VOLUME"]
-		
-		#Set the status to completed
-		self.status_var.set("Particle Detection Analysis Done ! Creating Cluster Map Image...")
-		self.master.update()
+			self.clusters_xmean[i] = self.cluster_data[i]["XMEAN"]
+			self.clusters_ymean[i] = self.cluster_data[i]["YMEAN"]
 		
 		#Interpret the source image into a matrix of numbers
 		imdata_3d = np.array(self.img_source)
@@ -2250,8 +2394,8 @@ class coffeegrindsize_GUI:
 			#Mark cluster center in blue
 			xmean = int(round(self.cluster_data[i]["XMEAN"]))
 			ymean = int(round(self.cluster_data[i]["YMEAN"]))
-			cluster_map_display[xmean, ymean, 0] = 40
-			cluster_map_display[xmean, ymean, 1] = 40
+			cluster_map_display[xmean, ymean, 0] = 80
+			cluster_map_display[xmean, ymean, 1] = 80
 			cluster_map_display[xmean, ymean, 2] = 255
 		
 		#Transform the display array into a PIL image
@@ -2263,12 +2407,6 @@ class coffeegrindsize_GUI:
 		
 		#Refresh the image that is displayed
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
-		
-		#Refresh the user interface status
-		self.status_var.set("Particle Detection Analysis Done ! Cluster Map Image is Now Displayed...")
-		
-		#Refresh the state of the user interface window
-		self.master.update()
 	
 	#Method for a smoothing by moving average
 	def smooth(self, x, window_size):
@@ -2636,6 +2774,61 @@ class coffeegrindsize_GUI:
 		
 		self.eff_var.set(effs_average_str)
 		self.q_var.set(q_str)
+	
+	#Method to erase clusters
+	def erase_clusters(self, event):
+		
+		#Verify that clusters were defined
+		if self.nclusters is None:
+			
+			#Update the user interface status
+			self.status_var.set("Coffee Particles not Detected Yet... Use Launch Particle Detection Button...")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Return to caller
+			return
+		
+		#Verify that the cluster image is being displayed
+		if self.display_type.get() != outlines_image_display_name:
+			
+			#Update the user interface status
+			self.status_var.set("Please select 'Display Type' = 'Cluster Outlines' to use the 'Erase Clusters' tool.")
+			
+			#Update the user interface
+			self.master.update()
+			
+			return
+		
+		#If "Erase Clusters" mode was off
+		if self.erase_clusters_mode is False:
+			
+			#Update the user interface status
+			self.status_var.set("Entered 'Erase Clusters' mode. Click with the mouse to erase all clusters within the circle. Zoom in or out to set precision. Hit Escape or the 'Erase Clusters' button to end.")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Update "Erase Clusters" internal status and return
+			self.erase_clusters_mode = True
+			
+			return
+		
+		#If the 'Erase Clusters' mode was selected then this is what needs to be quit
+		if self.erase_clusters_mode is True:
+			
+			#Update the user interface status
+			self.status_var.set("The 'Erase Clusters' mode was deactivated.")
+			
+			#Update the user interface
+			self.master.update()
+			
+			#Update "Erase Clusters" internal status and return
+			self.erase_clusters_mode = False
+			
+			return
+		
 		
 	#Method to create histogram
 	def create_histogram(self, event):
@@ -2651,6 +2844,9 @@ class coffeegrindsize_GUI:
 			
 			#Return to caller
 			return
+		
+		#Quit "Erase Clusters" mode if it was still on
+		self.erase_clusters_mode = False
 		
 		#Check that a physical size was set
 		if self.pixel_scale_var.get() == "None":
