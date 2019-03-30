@@ -82,7 +82,7 @@ default_log_binsize = 0.05
 default_binsize = 0.1
 
 #List of reference objects with their diameters in millimeters
-reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "Canadian Two Dollars":28.0, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91, "US Penny":19.05, "2 Euros":25.75, "1 Euro":23.25, "50 Euro Cents":24.25, "20 Euro Cents":22.25}
+reference_objects_dict = {"Custom":None, "Canadian Quarter":23.81, "Canadian Dollar":26.5, "Canadian Dime":18.03, "Canadian Two Dollars":28.0, "Canadian Five Cents":21.3, "US Quarter":24.26, "US Dollar":26.92, "US Dime":17.91, "US Penny":19.05, "2 Euros":25.75, "1 Euro":23.25, "50 Euro Cents":24.25, "20 Euro Cents":22.25}
 
 #Default output directory
 def_output_dir = os.path.expanduser("~")
