@@ -1798,7 +1798,7 @@ class coffeegrindsize_GUI:
 			self.pixel_length_var.set(None)
 			self.physical_length_var.set(None)
 			self.pixel_scale_var.set(None)
-		self.reference_object.set("Custom")
+			self.reference_object.set("Custom")
 		#Close all plots
 		#This causes a crash when reopening a new image
 		#plt.close()
