@@ -1783,7 +1783,8 @@ class coffeegrindsize_GUI:
 		self.pixel_scale_var.set(None)
 		self.reference_object.set("Custom")
 		#Close all plots
-		plt.close()
+		#This causes a crash when reopening a new image
+		#plt.close()
 		
 	#Method to open an image from the disk
 	def open_image(self, event):
