@@ -1792,11 +1792,11 @@ class coffeegrindsize_GUI:
 		self.img_histogram = None
 		self.nclusters = None
 		self.cluster_data = None
-		self.pixel_length_var.set(None)
-		self.physical_length_var.set(None)
 		self.physical_angle_var.set(None)
 		#Keep pixel scale in expert mode
 		if self.expert_mode is False:
+			self.pixel_length_var.set(None)
+			self.physical_length_var.set(None)
 			self.pixel_scale_var.set(None)
 		self.reference_object.set("Custom")
 		#Close all plots
