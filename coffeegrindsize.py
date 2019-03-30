@@ -239,8 +239,8 @@ class coffeegrindsize_GUI:
 		
 		#Length of the reference object
 		#Comment on March 3, 2019: To add support for simplified output, use argument simple_data_entry=simple_data_entry
-		self.pixel_length_var, self.pixel_length_id, self.simple_pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True)
-		self.physical_length_var, self.physical_length_id, self.simple_physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale")
+		self.pixel_length_var, self.pixel_length_id, self.simple_pixel_length_id = self.label_entry(def_pix_len, "Reference Pixel Length:", "pix", entry_id=True, clear_on_click=True)
+		self.physical_length_var, self.physical_length_id, self.simple_physical_length_id = self.label_entry(reference_objects_dict["Custom"], "Reference Physical Size:", "mm", entry_id=True, event_on_entry="update_pixel_scale", clear_on_click=True)
 		self.pixel_length_id.config(state=DISABLED)
 		self.simple_pixel_length_id.config(state=DISABLED)
 		
@@ -252,7 +252,7 @@ class coffeegrindsize_GUI:
 		
 		#Physical size of one pixel in the coffee grounds picture
 		#For now this needs to be input manually
-		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm")
+		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm", clear_on_click=True)
 		
 		#self.label_separator()
 		
@@ -260,7 +260,7 @@ class coffeegrindsize_GUI:
 		self.label_title("Threshold Step:", advanced=True)
 		
 		#Value of fractional threshold in units of flux in the blue channel of the image
-		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%", advanced=True)
+		self.threshold_var = self.label_entry(def_threshold, "Threshold:", "%", advanced=True, clear_on_click=True)
 		
 		#self.label_separator()
 		
@@ -268,14 +268,14 @@ class coffeegrindsize_GUI:
 		self.label_title("Particle Detection Step:", advanced=True)
 		
 		#Maximum cluster diameter that should be considered a valid coffee particle
-		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix", advanced=True)
+		self.max_cluster_axis_var = self.label_entry(def_max_cluster_axis, "Maximum Cluster Diameter:", "pix", advanced=True, clear_on_click=True)
 		
 		#Minumum cluster surface that should be considered a valid coffee particle
-		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix²", advanced=True)
+		self.min_surface_var = self.label_entry(def_min_surface, "Minimum Cluster Surface:", "pix²", advanced=True, clear_on_click=True)
 		
 		#Minimum cluster roundness that should be considered a valid coffee particle
 		#Roundess is defined between 0 and 1 where 1 is a perfect circle. It represents the fraction of thresholded pixels inside the smallest circle that encompasses the farthest thresholded pixels in one cluster
-		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "", advanced=True)
+		self.min_roundness_var = self.label_entry(def_min_roundness, "Minimum Roundness:", "", advanced=True, clear_on_click=True)
 		
 		#Threshold to select pixels dark enough to serve as a reference in the cost function in the cluster breakup step
 		if self.display_advanced_options is True:
@@ -335,7 +335,7 @@ class coffeegrindsize_GUI:
 		xaxis_auto_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
 		#X axis range for the histogram figure
-		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
+		self.xmin_var, self.xmin_var_id = self.label_entry(def_min_x_axis, "Min. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True, clear_on_click=True)
 		
 		#Whether the X axis of the histogram should be in logarithm format
 		#This is a checkbox
@@ -344,7 +344,7 @@ class coffeegrindsize_GUI:
 		xlog_checkbox = Checkbutton(self.frame_options, text="Log X axis | ", variable=self.xlog_var, command=self.xlog_event)
 		xlog_checkbox.grid(row=self.options_row, columnspan=1, sticky=E, column=0)
 		
-		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
+		self.xmax_var, self.xmax_var_id = self.label_entry(def_max_x_axis, "Max. X Axis:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True, clear_on_click=True)
 		
 		#By default these options are disabled
 		self.xmin_var_id.config(state=DISABLED)
@@ -362,7 +362,7 @@ class coffeegrindsize_GUI:
 		#self.options_row += 1
 		
 		#X axis range for the histogram figure
-		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Num. bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True)
+		self.nbins_var, self.nbins_var_id = self.label_entry(10, "Num. bins:", "", entry_id=True, addcol=1, event_on_enter="create_histogram", advanced=True, clear_on_click=True)
 		
 		#By default this option is disabled
 		self.nbins_var_id.config(state=DISABLED)
@@ -699,6 +699,7 @@ class coffeegrindsize_GUI:
 		self.master.bind_all("<Command-l>", self.load_data)
 		self.master.bind_all("<Control-c>", self.load_comparison_data)
 		self.master.bind_all("<Control-v>", self.save_histogram)
+		self.master.bind_all("<Command-e>", lambda event: self.toggle_expert_mode())
 		
 		#Set up key binding for data analysis selection quit
 		self.image_canvas.bind_all("<Escape>", self.quit_region_select)
@@ -1086,7 +1087,7 @@ class coffeegrindsize_GUI:
 		return data_var
 	
 	#Method to display a label in the options frame
-	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, event_on_entry=None, addcol=0, event_on_enter=None, advanced=False):
+	def label_entry(self, default_var, text, units_text, columnspan=None, width=None, entry_id=False, clear_on_click=False, event_on_entry=None, addcol=0, event_on_enter=None, advanced=False):
 		
 		#Default width is located in the internal class variables
 		if width is None:
@@ -1117,10 +1118,17 @@ class coffeegrindsize_GUI:
 		data_entry = Entry(self.frame_options, textvariable=data_var, width=width)
 		data_entry.grid(row=self.options_row, column=1+addcol, columnspan=columnspan)
 		
+		#Bind Entry with clearing of data
+		if clear_on_click is True:
+			data_entry.bind("<Button-1>", lambda event: self.clear_entry(data_entry))
+		
 		#Also display simplified version if required
 		if advanced is False:
 			simple_data_entry = Entry(self.simple_frame_options, textvariable=data_var, width=width)
 			simple_data_entry.grid(row=self.simple_options_row, column=1+addcol, columnspan=columnspan)
+			#Bind Entry with clearing of data
+			if clear_on_click is True:
+				simple_data_entry.bind("<Button-1>", lambda event: self.clear_entry(simple_data_entry))
 		
 		#Bind the return key with a method
 		if event_on_enter is not None:
@@ -1154,6 +1162,10 @@ class coffeegrindsize_GUI:
 		else:
 			#Otherwise return just value of the bound variable to the caller
 			return data_var
+	
+	#Method to clear entry (when clicked)
+	def clear_entry(self, entry_id):
+		entry_id.delete(0, "end")
 	
 	#Method to display a title for option groups
 	def label_title(self, text, advanced=False):
