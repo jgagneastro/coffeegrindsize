@@ -252,7 +252,7 @@ class coffeegrindsize_GUI:
 		
 		#Physical size of one pixel in the coffee grounds picture
 		#For now this needs to be input manually
-		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm", clear_on_click=True)
+		self.pixel_scale_var = self.label_entry(def_pixel_scale, "Pixel Scale:", "pix/mm", clear_on_click=True, event_on_entry="update_statistics")
 		
 		#self.label_separator()
 		
@@ -918,6 +918,9 @@ class coffeegrindsize_GUI:
 		
 		#Update the object value and display
 		self.pixel_scale_var.set(pixel_scale_str)
+		
+		#Update the statistics
+		self.update_statistics()
 	
 	#Method to register changes in the histogram type option
 	def change_histogram_type(self, *args):
@@ -2414,6 +2417,9 @@ class coffeegrindsize_GUI:
 		self.display_type.set(outlines_image_display_name)
 		self.img = self.img_clusters
 		
+		#Update the statistics
+		self.update_statistics()
+		
 		#Refresh the image that is displayed
 		self.redraw(x=self.last_image_x, y=self.last_image_y)
 	
@@ -2722,6 +2728,10 @@ class coffeegrindsize_GUI:
 	def update_statistics(self):
 		#self.eff_var,self.ey_stddev_var,self.ey_average_var,self.surf_stddev_var,self.surf_average_var,self.diam_stddev_var,self.diam_average_var,
 		
+		#Verify that clusters were defined
+		if self.nclusters is None:
+			return
+		
 		#Read internal data
 		try:
 			pixel_scale = float(self.pixel_scale_var.get())
@@ -2882,9 +2892,6 @@ class coffeegrindsize_GUI:
 		# === Generate histogram from data ===
 		
 		bins_input, ypos_errorbar = self.psd_hist_from_data(self)
-		
-		#Update the statistics
-		self.update_statistics()
 		
 		#If comparison data is loaded plot it
 		if self.comparison.nclusters is not None:
