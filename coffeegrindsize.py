@@ -401,11 +401,11 @@ class coffeegrindsize_GUI:
 		self.label_separator(simpleonly=True)
 		
 		#Button to zoom in
-		self.zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
-		self.zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
+		#self.zoom_in_button = Button(self.frame_options, text="Zoom In", command=self.zoom_in_button)
+		#self.zoom_in_button.grid(row=self.options_row, column=0, columnspan=1, sticky=E)
 		
-		self.zoom_out_button = Button(self.frame_options, text="Zoom Out", command=self.zoom_out_button)
-		self.zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
+		#self.zoom_out_button = Button(self.frame_options, text="Zoom Out", command=self.zoom_out_button)
+		#self.zoom_out_button.grid(row=self.options_row, column=1, columnspan=1, sticky=W)
 		
 		#Button for resetting zoom in the displayed image
 		self.reset_zoom_button = Button(self.frame_options, text="Reset View", command=self.reset_zoom)
@@ -1563,7 +1563,7 @@ class coffeegrindsize_GUI:
 	
 	#Method to apply a zoom in with the button
 	def zoom_in_button(self):
-		
+
 		#Artificially set the mouse position at the image center
 		self.mouse_x, self.mouse_y = self.last_image_x, self.last_image_x
 		
