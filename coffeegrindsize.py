@@ -2495,7 +2495,7 @@ class coffeegrindsize_GUI:
 		#Return the final list of indices to the caller
 		return iout
 	
-	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar", ypos_errorbar=None):
+	def psd_hist_from_data(self, source, hist_color=[147, 36, 30], hist_label=None, bins_input=None, histtype="bar", ypos_errorbar=None, xerr_shift=0.):
 		
 		#Read internal data
 		try:
@@ -2638,9 +2638,40 @@ class coffeegrindsize_GUI:
 		hist_color_fm = (hist_color[0]/255, hist_color[1]/255, hist_color[2]/255)
 		ypdf, xpdfleft, patches = plt.hist(data, bins_input, histtype=histtype, color=hist_color_fm, label=hist_label, weights=data_weights/np.nansum(data_weights), density=False, lw=2, rwidth=.8)
 		
+		#Loop on histogram bins and, within each bin, determine the average weight. Use this average weight to reverse determine a number of objects and estimate a Poisson error bar
+		poisson_pos = np.full(bins_input.size-1, np.nan)
+		poisson_neg = np.full(bins_input.size-1, np.nan)
+		poisson = np.full(bins_input.size-1, np.nan)
+		for ibin in range(bins_input.size-1):
+			
+			#Find data points inside bin
+			ggi = np.where((data >= bins_input[ibin]) & (data < bins_input[ibin+1]))
+			
+			#Find the average weight of data inside bin
+			avg_weight = data_weights[ggi].mean()/np.nansum(data_weights)
+
+			#Determine symmetrical and approximate asymmetrical Poisson error bars
+			ndata = float(ggi[0].size)
+			poisson_pos[ibin] = (0.5 + np.sqrt(ndata+0.25))*avg_weight
+			poisson_neg[ibin] = (-0.5 + np.sqrt(ndata+0.25))*avg_weight
+			poisson[ibin] = np.sqrt(ndata)*avg_weight
+
 		#Find the value for the center of each bin
 		xpdf = xpdfleft[0:-1] + np.diff(xpdfleft)/2.0
 		
+		#Plot the error bars on bins
+		#stop()
+		hist_color_fm_error_factor = 2
+		hist_color_fm_error = (hist_color[0]/hist_color_fm_error_factor/255, hist_color[1]/hist_color_fm_error_factor/255, hist_color[2]/hist_color_fm_error_factor/255)
+		
+		if self.xlog_var.get() == 0:
+			xpdf_shifted = xpdf+(xpdf-xpdfleft[0:-1])*xerr_shift
+		else:
+			xpdf_shifted = xpdf*(xpdf/xpdfleft[0:-1])**xerr_shift
+
+		serrbins = plt.errorbar(xpdf_shifted, ypdf, yerr=np.array([poisson_neg,poisson_pos]), marker=".", markersize=0, linestyle="", color=hist_color_fm_error, elinewidth=2, capsize=0, alpha=0.8, zorder=15)
+		#serrbins = plt.errorbar(xpdf, ypdf, yerr=poisson, marker=".", markersize=8*1.4, linestyle="", color="w", elinewidth=4, capsize=4, capthick=3, alpha=0.8, zorder=15)
+
 		#Calculate the average weighted by histogram height
 		avg = np.nansum(ypdf*xpdf)/np.nansum(ypdf)
 		
@@ -2891,11 +2922,15 @@ class coffeegrindsize_GUI:
 		
 		# === Generate histogram from data ===
 		
-		bins_input, ypos_errorbar = self.psd_hist_from_data(self)
+		xerr_shift = 0.0
+		if self.comparison.nclusters is not None:
+			xerr_shift = -0.1
+
+		bins_input, ypos_errorbar = self.psd_hist_from_data(self, xerr_shift=xerr_shift)
 		
 		#If comparison data is loaded plot it
 		if self.comparison.nclusters is not None:
-			self.psd_hist_from_data(self.comparison, hist_color=[74, 124, 179], hist_label=self.comparison_data_label_var.get(), bins_input=bins_input, histtype="step", ypos_errorbar=ypos_errorbar*2)
+			self.psd_hist_from_data(self.comparison, hist_color=[74, 124, 179], hist_label=self.comparison_data_label_var.get(), bins_input=bins_input, histtype="step", ypos_errorbar=ypos_errorbar*2, xerr_shift=-xerr_shift)
 		
 		#Make xlog if needed
 		if self.xlog_var.get() == 1:
