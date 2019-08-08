@@ -1,0 +1,1 @@
+To open the application simply launch the .app file located at /App/dist/coffeegrindsize.app
