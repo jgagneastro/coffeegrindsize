@@ -4,7 +4,7 @@ You can download this instructions [here](./Help/coffee_grind_size_installation.
 
 ## Downloading the app
 
-You can download the application [here](./App/dist/coffeegrindsize.app).
+You can download [the latest release here](https://github.com/jgagneastro/coffeegrindsize/releases/latest).
 
 After downloading, you can place this file anywhere. (e.g., in your `/Applications` directory). 
 
@@ -22,7 +22,10 @@ The next step is to go in “Security & Privacy” (highlighted above), and make
 
 ![2](./media/2.png "2")
 
-Note how something new appeared in this options window: there’s a message about "coffeegrindsize.app" having been blocked from running because I’m not an Apple Developer. You can allow it to open anyway by clicking “Open Anyway” (it is possible that you will need to click on the locker symbol on the lower left window and enter your admin password first).
+Note how something new appeared in this options window: there’s a message about "coffeegrindsize.app" having been blocked from running because I’m not an Apple Developer. 
+
+You can allow it to open anyway by clicking “Open Anyway” (it is possible that you will need to click on the locker symbol on the lower left window and enter your admin password first).
+
 Once you did this, you can go back to the .app file, and double-click it again. You will get one last warning:
 
 ![4](./media/4.png "4")
