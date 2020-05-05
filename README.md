@@ -38,7 +38,13 @@ After installing, please make sure you read the [user manual](./Help/coffee_grin
 
 ## Building the app
 
+If you know your way around python, you could build the app from source.
+
+- `cd coffeegrindsize/` (this folder)
 - `virtualenv venv`
-- `. ./venv/bin/activate`
+- `. venv/bin/activate`
 - `pipenv install`
-- `python setup.py py2app`
+- `python setup.py py2app` (or) `python setup.py py2app -A` to run locally
+
+The app will be located in `./dist/coffeegrindsize.app`
+
