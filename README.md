@@ -42,7 +42,7 @@ If you know your way around python, you could build the app from source.
 
 - `cd coffeegrindsize/` (this folder)
 - `virtualenv venv`
-- `. venv/bin/activate`
+- `. ./venv/bin/activate`
 - `pipenv install`
 - `python setup.py py2app` to build for deployment (or) `python setup.py py2app -A` to build for testing.
 
