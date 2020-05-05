@@ -32,7 +32,7 @@ Once you did this, you can go back to the .app file, and double-click it again. 
 
 But this time, you can choose “Open”, in which case you will not need to do any of this next time you open the app !
 
-After installing, please make sure you read the [user manual](./Help/coffee_grind_size_manual.pdf).
+Then, you can choose to either read this [quick summary](./Help/coffee_grind_size_summarized_manual.pdf) that will get you running with the basics, or this very detailed and wordy [user manual](./Help/coffee_grind_size_manual.pdf) that will guide you through all the detailed options the application offers you.
 
 ### [coffeeadastra.com](https://coffeeadastra.com/2019/04/07/an-app-to-measure-your-coffee-grind-size-distribution-2/)
 
@@ -44,7 +44,6 @@ If you know your way around python, you could build the app from source.
 - `virtualenv venv`
 - `. venv/bin/activate`
 - `pipenv install`
-- `python setup.py py2app` (or) `python setup.py py2app -A` to run locally
+- `python setup.py py2app` to build for deployment (or) `python setup.py py2app -A` to build for testing.
 
 The app will be located in `./dist/coffeegrindsize.app`
-

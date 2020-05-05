@@ -10,10 +10,19 @@ from setuptools import setup
 APP = ['coffeegrindsize.py']
 APP_NAME='Coffee Particle Grind Size Distribution'
 DATA_FILES = []
-OPTIONS = {}
+OPTIONS = {
+    'argv_emulation': True,
+    'plist': {
+        'CFBundleName': 'CoffeeGrindSize',
+        'CFBundleShortVersionString':'1.0.0', 
+        'CFBundleVersion': '1.0.0', 
+        'CFBundleIdentifier':'com.coffeeadastra.coffeegrindsize', 
+        'NSHumanReadableCopyright': '@ Jonathan Gagné'
+    }
+}
 
 setup(
-    app_name=APP_NAME,
+    name=APP_NAME,
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
