@@ -35,3 +35,10 @@ But this time, you can choose “Open”, in which case you will not need to do 
 After installing, please make sure you read the [user manual](./Help/coffee_grind_size_manual.pdf).
 
 ### [coffeeadastra.com](https://coffeeadastra.com/2019/04/07/an-app-to-measure-your-coffee-grind-size-distribution-2/)
+
+## Building the app
+
+- `virtualenv venv`
+- `. ./venv/bin/activate`
+- `pipenv install`
+- `python setup.py py2app`
