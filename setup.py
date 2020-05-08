@@ -7,7 +7,7 @@ Usage:
 
 from setuptools import setup
 
-APP = ['coffeegrindsize.py']
+APP = ['./coffeegrindsize.py']
 APP_NAME='Coffee Particle Grind Size Distribution'
 DATA_FILES = []
 OPTIONS = {
@@ -25,6 +25,5 @@ setup(
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-    install_requires=['tkinter','pillow','numpy','pandas','matplotlib'],
+    setup_requires=['py2app']
 )
