@@ -14,8 +14,7 @@ OPTIONS = {
     'plist': {
         'CFBundleName': 'CoffeeGrindSize',
         'CFBundleShortVersionString':'1.0.0', 
-        'CFBundleVersion': '1.0.0', 
-        'CFBundleIdentifier':'com.coffeeadastra.coffeegrindsize', 
+        'CFBundleVersion': '1.0.0',
         'NSHumanReadableCopyright': '@ Jonathan Gagné'
     }
 }
@@ -25,6 +24,5 @@ setup(
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-    install_requires=['tkinter','pillow','numpy','pandas','matplotlib'],
+    setup_requires=['py2app']
 )
