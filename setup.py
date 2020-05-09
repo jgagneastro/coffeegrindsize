@@ -7,7 +7,7 @@ Usage:
 
 from setuptools import setup
 
-APP = ['coffeegrindsize.py']
+APP = ['./coffeegrindsize.py']
 APP_NAME='Coffee Particle Grind Size Distribution'
 DATA_FILES = []
 OPTIONS = {
