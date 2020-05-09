@@ -41,9 +41,36 @@ Then, you can choose to either read this [quick summary](./Help/coffee_grind_siz
 If you know your way around python, you could build the app from source.
 
 - `cd coffeegrindsize/` (this folder)
-- `virtualenv venv`
-- `. ./venv/bin/activate`
-- `pipenv install`
-- `python setup.py py2app` to build for deployment (or) `python setup.py py2app -A` to build for testing.
 
-The app will be located in `./dist/coffeegrindsize.app`
+If you use py2app : 
+
+- `python3 setup.py py2app --packages=PIL` to build for deployment 
+- (or) `python3 setup.py py2app -A` to build for testing.
+
+If you use pyinstaller : 
+
+`pyinstaller --onefile --windowed --noconfirm --add-binary='/System/Library/Frameworks/Tk.framework/Tk':'tk' --add-binary='/System/Library/Frameworks/Tcl.framework/Tcl':'tcl' coffeegrindsize.py --clean 
+--hidden-import="pkg_resources.py2_warn"`
+
+## Troubleshooting. 
+
+**Note:** (YMMV)
+
+If you have issues building or running the built app, you may need some, of all the packages outlined below: 
+
+```
+brew install tcl-tk openssl readline sqlite3 \
+             xz zlib pygobject3 gtk+3 pkg-config \
+             qt sip pyqt libpng freetype libjpeg \
+             jpeg openjpeg zlib
+```
+
+Also, you may need the following python libraries: 
+
+```
+pip3 install matplotlib pandas tkinter numpy jupyter \
+             PyQt5 PyQt4 pycairo cairocffi PyGObject \
+             ipython tornado Cython pytest ipykernel \
+             configparser six pillow Image macholib \
+             scipy pyinstaller setuptools wxPython
+```
