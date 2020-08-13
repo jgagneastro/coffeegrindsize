@@ -36,7 +36,7 @@ Then, you can choose to either read this [quick summary](./Help/coffee_grind_siz
 
 ### [coffeeadastra.com](https://coffeeadastra.com/2019/04/07/an-app-to-measure-your-coffee-grind-size-distribution-2/)
 
-## Building the app
+## Building the app on MacOS
 
 If you know your way around python, you could build the app from source.
 
@@ -74,3 +74,12 @@ pip3 install matplotlib pandas tkinter numpy jupyter \
              configparser six pillow Image macholib \
              scipy pyinstaller setuptools wxPython
 ```
+
+## Building on other operating systems: 
+
+To build on ubuntu 16.04 you can try: 
+
+```
+pyinstaller --onefile --windowed --noconfirm --add-binary='/usr/lib/x86_64-linux-gnu/libtk8.6.so':'tk' --add-binary='/usr/lib/x86_64-linux-gnu/libtcl8.6.so':'tcl' coffeegrindsize.py --clean --hidden-import="pkg_resources.py2_warn"
+```
+
