@@ -2332,7 +2332,7 @@ class coffeegrindsize_GUI:
 			
 			#Suppose that the hidden axis is equal to the short axis and calculate volume
 			#Here we also approximate the coffee particle as an ellipsoid
-			volume = np.pi*short_axis**2*axis
+			volume = (4./3.)*np.pi*short_axis**2*axis
 			
 			#Create a structure with the cluster information
 			clusteri_data = {"CLUSTER_ID":i, "SURFACE":surface, "XLIST":xlist.astype(int), "YLIST":ylist.astype(int), "LONG_AXIS":axis, "ROUNDNESS":roundness, "VOLUME":volume, "SHORT_AXIS":short_axis, "XMEAN":xmean, "YMEAN":ymean, "XSTART":X_mask[icurrent].astype(int), "YSTART":Y_mask[icurrent].astype(int), "ZLIST":zlist, "ICLUST_FILTERED":iclust[iclust_filtered], "ICLUST":iclust, "MAXCOST_ALONG_PATH":maxcost_along_path, "COST":cost}
