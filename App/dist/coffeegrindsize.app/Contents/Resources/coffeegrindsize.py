@@ -1727,7 +1727,8 @@ class coffeegrindsize_GUI:
 		self.master.update()
 		
 		#Invoke a file dialog to select output directory
-		self.output_dir = filedialog.askdirectory(initialdir=self.output_dir,title="Select an output directory")
+		#Losing the initialdir= argument should cause the app to use the same directory between runs.
+		self.output_dir = filedialog.askdirectory(title="Select an output directory")
 		
 		#Update the label entry
 		self.output_dir_var.set(self.output_dir)
@@ -1817,7 +1818,8 @@ class coffeegrindsize_GUI:
 		#Do not delete
 		#Invoke a file dialog to select image
 		#image_filename = "/Users/gagne/Documents/Postdoc/Coffee_Stuff/Grind_Size/Forte_half_seasoned/forte_3y_mid.png"
-		image_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a PNG image",filetypes=(("png files","*.png"),("jpeg files","*.jpg"),("jpeg files","*.jpeg"),("all files","*.*")))
+		#Losing the initialdir= argument should cause the app to use the same directory between runs.
+		image_filename = filedialog.askopenfilename(title="Select a PNG image",filetypes=(("png files","*.png"),("jpeg files","*.jpg"),("jpeg files","*.jpeg"),("all files","*.*")))
 		
 		# === Display image if filename is set ===
 		# Hitting cancel in the filedialog will therefore skip the following steps
@@ -3002,7 +3004,8 @@ class coffeegrindsize_GUI:
 		self.master.update()
 		
 		#Invoke a file dialog to select data file
-		csv_data_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
+		#Losing the initialdir= argument should cause the app to use the same directory between runs.
+		csv_data_filename = filedialog.askopenfilename(title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
 		
 		#Create a Pandas dataframe from the CSV data
 		dataframe = pd.read_csv(csv_data_filename)
@@ -3029,7 +3032,8 @@ class coffeegrindsize_GUI:
 		self.master.update()
 		
 		#Invoke a file dialog to select data file
-		csv_data_filename = filedialog.askopenfilename(initialdir=self.output_dir,title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
+		#Losing the initialdir= argument should cause the app to use the same directory between runs.
+		csv_data_filename = filedialog.askopenfilename(title="Select a CSV data file",filetypes=(("csv files","*.csv"),("all files","*.*")))
 		
 		#Create a Pandas dataframe from the CSV data
 		dataframe = pd.read_csv(csv_data_filename)
@@ -3116,7 +3120,8 @@ class coffeegrindsize_GUI:
 		if self.expert_mode is True:
 			full_filename = self.output_dir+os.sep+filename
 		else:
-			full_filename = filedialog.asksaveasfilename(initialdir=self.output_dir, initialfile=filename, title="Select an output file name")
+			#Losing the initialdir= argument should cause the app to use the same directory between runs.
+			full_filename = filedialog.asksaveasfilename(initialfile=filename, title="Select an output file name")
 		
 		#Create a Pandas dataframe for stats
 		stats_dataframe = pd.DataFrame({"AVG_DIAM":[float(self.diam_average_var.get())],"STD_DIAM":[float(self.diam_stddev_var.get())], "AVG_SURF":[float(self.surf_average_var.get())],"STD_SURF":[float(self.surf_stddev_var.get())], "EFF":[float(self.eff_var.get())],"QUAL":[float(self.q_var.get())]})
@@ -3179,7 +3184,8 @@ class coffeegrindsize_GUI:
 		if self.expert_mode is True:
 			full_filename = self.output_dir+os.sep+filename
 		else:
-			full_filename = filedialog.asksaveasfilename(initialdir=self.output_dir, initialfile=filename, title="Select an output file name")
+			#Losing the initialdir= argument should cause the app to use the same directory between runs.
+			full_filename = filedialog.asksaveasfilename(initialfile=filename, title="Select an output file name")
 		
 		#Save file to PNG
 		self.img.save(full_filename)
